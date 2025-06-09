@@ -1,0 +1,14 @@
+{
+  "name": "outlook-onenote-plugin",
+  "version": "1.0.0",
+  "description": "Local HTTPS server for Outlook Add-in development",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "generate-cert": "openssl req -x509 -newkey rsa:2048 -nodes -keyout certs/localhost.key -out certs/localhost.crt -days 365 -subj "/CN=localhost"",
+    "auth-test": "node graph-auth-test.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
