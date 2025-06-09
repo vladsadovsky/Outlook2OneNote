@@ -38,48 +38,10 @@ Go to [https://portal.azure.com](https://portal.azure.com):
 
 ---
 
-### 2. Generate HTTPS Certificate
+### 3. Launch webpack server
 
-```bash
-mkdir certs
-openssl req -x509 -newkey rsa:2048 -nodes -keyout certs/localhost.key -out certs/localhost.crt -days 365 -subj "/CN=localhost"
-```
+npm start 
 
-Install `localhost.crt` in your OS trust store (Trusted Root CA).
-
----
-
-### 3. Start a Local HTTPS Server
-
-From the `server` directory:
-```bash
-npm init -y
-npm install express
-```
-
-Create `server.js`:
-```js
-const fs = require('fs');
-const https = require('https');
-const express = require('express');
-const app = express();
-
-app.use(express.static('public'));
-
-https.createServer({
-  key: fs.readFileSync('certs/localhost.key'),
-  cert: fs.readFileSync('certs/localhost.crt')
-}, app).listen(3000, () => {
-  console.log('Server running at https://localhost:3000');
-});
-```
-
-Run:
-```bash
-node server.js
-```
-
----
 
 ### 4. Sideload the Add-in in Outlook
 

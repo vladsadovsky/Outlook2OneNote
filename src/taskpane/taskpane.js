@@ -1,7 +1,3 @@
-/*
- * Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
- * See LICENSE in the project root for license information.
- */
 
 /* global document, Office */
 
@@ -14,9 +10,6 @@ Office.onReady((info) => {
 });
 
 export async function run() {
-  /**
-   * Insert your Outlook code here
-   */
 
   const item = Office.context.mailbox.item;
   let insertAt = document.getElementById("item-subject");
