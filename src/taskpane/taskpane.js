@@ -2,6 +2,8 @@
 /* global document, Office */
 
 Office.onReady((info) => {
+  console.log("taskpane::Office.onReady ")
+
   if (info.host === Office.HostType.Outlook) {
     document.getElementById("sideload-msg").style.display = "none";
     document.getElementById("app-body").style.display = "flex";
@@ -10,6 +12,8 @@ Office.onReady((info) => {
 });
 
 export async function run() {
+
+console.log("taskpane::run() ")
 
   const item = Office.context.mailbox.item;
   let insertAt = document.getElementById("item-subject");

@@ -1,6 +1,8 @@
 
 Office.onReady(() => {
   // If needed, Office.js is ready to be called.
+
+  console.log("commands::Office.onReady ")
 if (info.host === Office.HostType.Outlook) {
     document.getElementById("sideload-msg").style.display = "none";
     document.getElementById("app-body").style.display = "flex";
@@ -14,6 +16,7 @@ if (info.host === Office.HostType.Outlook) {
  * @param event {Office.AddinCommands.Event}
  */
 function action(event) {
+  console.log("taskpane::action() ")
   const message = {
     type: Office.MailboxEnums.ItemNotificationMessageType.InformationalMessage,
     message: "Performed action.",
