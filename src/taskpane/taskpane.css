@@ -33,8 +33,8 @@
     flex-direction: column;
     -webkit-flex-wrap: nowrap;
     flex-wrap: nowrap;
-    -webkit-align-items: center;
-    align-items: center;
+    -webkit-align-items: flex-start;
+    align-items: flex-start;
     -webkit-flex: 1 0 0;
     flex: 1 0 0;
     padding: 10px 20px;
@@ -76,4 +76,8 @@
 
 b {
     font-weight: bold;
+}
+
+#app-body.hidden {
+    display: none;
 }

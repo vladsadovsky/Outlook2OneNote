@@ -1,0 +1,6 @@
+{
+    "C_Cpp.default.configurationProvider": "go2sh.cmake-integration",
+    "debug.allowBreakpointsEverywhere": true,
+    "debug.javascript.unmapMissingSources": true,
+    "debug.javascript.suggestPrettyPrinting": false
+}

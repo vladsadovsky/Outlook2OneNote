@@ -7,18 +7,30 @@
     {
       "type": "msedge",
       "request": "launch",
-      "name": "Launch Edge against localhost",
-      "url": "http://localhost:8080",
-      "webRoot": "${workspaceFolder}"
+      "name": "Launch Edge against localhost (Office Add-in)",
+      "url": "https://localhost:3000/taskpane.html",
+      "webRoot": "${workspaceFolder}",
+      "sourceMaps": true,
+      "trace": true
     },
     {
       "name": "Attach to Edge (Outlook Add-in)",
       "type": "msedge",
       "request": "attach",
       "port": 9222,
-      "webRoot": "${workspaceFolder}/server/public",
+      "webRoot": "${workspaceFolder}",
       "sourceMaps": true,
-      "timeout": 10000
+      "timeout": 10000,
+      "trace": true
+    },
+    {
+      "type": "chrome",
+      "request": "launch",
+      "name": "Launch Chrome against localhost (Office Add-in)",
+      "url": "https://localhost:3000/taskpane.html",
+      "webRoot": "${workspaceFolder}",
+      "sourceMaps": true,
+      "trace": true
     }
   ]
 }

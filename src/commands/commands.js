@@ -1,12 +1,28 @@
 
 Office.onReady(() => {
-  // If needed, Office.js is ready to be called.
+  /** *
+   * commands.js
+   * This file contains the command functions for the Outlook2OneNote add-in.
+   * It handles user interactions and communicates with the Office.js API.
+   *  Note: This code assumes that you have already set up the necessary Office.js and Microsoft Graph API configurations.
+   * 
+   * Dependencies:
+   * - Office.js
+   * - Microsoft Graph API (for OneNote notebooks)
+   * 
+   * Global variables:
+   * - info: Contains information about the Office host environment.
+   * - document: The global document object for manipulating the DOM.
+   * 
+   * Usage:
+   * - Call `action()` to show a notification when the add-in command is executed.  
+   */
 
-  console.log("commands::Office.onReady ")
+  console.log("Outlook2OneNote::commands::Office.onReady ")
 if (info.host === Office.HostType.Outlook) {
     document.getElementById("sideload-msg").style.display = "none";
     document.getElementById("app-body").style.display = "flex";
-    document.getElementById("run").onclick = run;
+    //document.getElementById("run").onclick = run;
   }
 
 });
@@ -16,7 +32,7 @@ if (info.host === Office.HostType.Outlook) {
  * @param event {Office.AddinCommands.Event}
  */
 function action(event) {
-  console.log("taskpane::action() ")
+  console.log("Outlook2OneNote::commands::action() ")
   const message = {
     type: Office.MailboxEnums.ItemNotificationMessageType.InformationalMessage,
     message: "Performed action.",
