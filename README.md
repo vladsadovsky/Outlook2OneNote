@@ -3,30 +3,153 @@
 
 This project is an Office Add-In for Outlook to export current email thread into OneNote as a set of pages
 
+## Usage and features
+
+Add-In in production usage will appear in Microsoft Office app and Add-Ins discovery service (AppSource). Follow guidelines how to install new Add-In.
+
+### UI appearance
+In Outlook Web and Outlook Desktop New access to the Add-In is done via commands, accessed from Add-In interface in opened message Read Pane. In Outlook Desktop Classic access is through Add-In buttons in Ribbon.
+
+One command opens up task pane with built-in menu. 
+
+Second command performans UI less export. 
+
+### User Features
+
+- Adds a ribbon button to 
+- Lets users choose a OneNote notebook via Microsoft Graph
+- Creates a section and adds one page per email in the selected thread
+
+
+### 🛠 Developer Features (Debug Mode Only)
+
+- **DumpThread Function**: Available only in development builds for debugging purposes
+  - Displays the current email subject and sender information
+  - Retrieves and shows all emails in the currently selected thread/conversation
+  - Uses Exchange Web Services (EWS) to analyze conversation structure
+  - Provides detailed thread analysis including subjects, senders, and timestamps
+  - **Note**: This feature is automatically excluded from production builds
+---
+
+## Development 
 
 
 
-## Workflow for using 
+### 1. Register an Azure AD App
 
-### Validate the state
+This is one time step. Registered application name is Outlook2OneNoteAddin 
 
-Run npm run validate 
+Go to [https://portal.azure.com](https://portal.azure.com):
+- Register a new app (e.g., "OutlookOneNoteAddin")
+- Add platform: `Single-page application` → `https://localhost:3000/taskpane.html`
+- Add API permissions:
+  - Microsoft Graph → Delegated → `User.Read`, `Mail.Read`, `Notes.ReadWrite`
+- Copy the `Application (client) ID` and replace `YOUR_CLIENT_ID_HERE` in `taskpane.js`
 
-Should produce list of platforms the Add In will run on, for example:
+---
 
-```Based on the requirements specified in your manifest, your add-in can run on the following platforms; your add-in will be tested on these platforms when you submit it to the Office Store:
-  - Outlook on Windows (Microsoft 365)
-  - Outlook on Mac (Microsoft 365)
-  - Outlook on the web
+### 2. Enlist 
+
+TODO Source repository is here: github
+
+#### 📁 Project Structure
+
 ```
 
-### Side loading 
-When running local server during development use sideloading in Outlook to load Add In module from the local folder. Allows for source debugging. For the process of side loading refer to https://learn.microsoft.com/en-us/office/dev/add-ins/testing/sideload-office-add-ins-for-testing , it differs for various versions of Outlook
+```
+
+---
 
 
-### Production
+### 3. Build 
 
-When tested and ready Add-In will be uploaded to AppSource
+After enlisting the project install Node modules
+
+``` npm install ```
+
+
+#### Development Mode (with debug features)
+```cmd
+npm run dev-server
+```
+This starts the webpack dev server in development mode with:
+- Debug features enabled (DumpThread button visible)
+- Hot reloading for faster development
+- Better source maps for debugging
+
+#### Production Build
+```cmd
+npm run build
+```
+This creates an optimized production build with:
+- Debug features excluded (DumpThread button hidden)
+- Minified and optimized code
+- No development dependencies
+
+#### Alternative Development Commands
+```cmd
+npm start          # Launches development server
+npm run build:dev  # Creates development build without server
+npm run watch      # Watches for changes and rebuilds automatically
+``` 
+
+#### 🔧 Conditional build (Development vs Production)
+
+This project uses webpack's `DefinePlugin` to implement conditional compilation, allowing different features and behavior between development and production builds.
+
+##### How It Works
+
+1. **Webpack Configuration**: The `__DEV__` constant is defined based on the build mode:
+   ```javascript
+   new webpack.DefinePlugin({
+     __DEV__: JSON.stringify(dev),  // true in development, false in production
+     'process.env.NODE_ENV': JSON.stringify(dev ? 'development' : 'production')
+   })
+   ```
+
+2. **Conditional Code Blocks**: Debug features are wrapped in conditional statements:
+   ```javascript
+   if (__DEV__) {
+     // Debug-only code here - will be completely removed in production builds
+     window.dumpThread = async function() { /* ... */ }
+   }
+   ```
+
+3. **UI Elements**: The DumpThread button is hidden in production:
+   ```javascript
+   if (__DEV__) {
+     document.getElementById("dumpthread").onclick = window.dumpThread;
+   } else {
+     document.getElementById("dumpthread").style.display = "none";
+   }
+   ```
+
+
+##### Build Modes
+
+| Command | Mode | __DEV__ | DumpThread Button | Features |
+|---------|------|---------|----------------|----------|
+| `npm run dev-server` | development | `true` | Visible & Functional | All debug features |
+| `npm run build:dev` | development | `true` | Visible & Functional | All debug features |
+| `npm run build` | production | `false` | Hidden | Production only |
+| `npm run watch` | development | `true` | Visible & Functional | All debug features |
+
+--- 365 Outlook Web Add-in that allows users to export an email thread to the OneNote notebook using the Microsoft Graph API.
+
+---
+
+
+### 4. Sideload the Add-in in Outlook
+
+1. Open Outlook Web
+2. Go to ⚙️ Settings > View all Outlook settings > Mail > Customize actions > Add-ins
+3. Select “Upload custom add-in” → from file
+4. Choose your `manifest.xml` (must match local URLs)
+
+---
+
+
+### 5. Debugging 
 
 ## 🐛 Debugging the Add-in
 
@@ -44,7 +167,9 @@ When tested and ready Add-In will be uploaded to AppSource
 
 ### Debugging Methods
 
-#### Method 1: VS Code Debugging (Recommended)
+#### Method 1: VS Code Debugging 
+
+Initially functions only with WebView2 based clients, OWA or Outlook New. 
 
 1. **Start the Development Server**:
    ```cmd
@@ -63,7 +188,7 @@ When tested and ready Add-In will be uploaded to AppSource
      - "Launch Chrome against localhost (Office Add-in)"
    - Press F5 or click the green play button
 
-4. **Attach to Outlook Web**:
+4. **Attach to Outlook Web**: 
    - If using the attach configuration, first open Outlook Web
    - Sideload your add-in
    - VS Code will attach to the browser process
@@ -201,150 +326,9 @@ The project uses different source map strategies:
    });
    ```
 
-### Performance Debugging
-
-1. **Check Bundle Size**:
-   ```cmd
-   npm run build
-   # Check dist/ folder for bundle sizes
-   ```
-
-2. **Analyze Webpack Bundle**:
-   ```cmd
-   npx webpack-bundle-analyzer dist/
-   ```
-
-3. **Monitor Memory Usage**:
-   - Use browser's Memory tab in DevTools
-   - Check for memory leaks in long-running sessions
-
----
-
-## 🔧 Conditional Compilation (Development vs Production)
-
-This project uses webpack's `DefinePlugin` to implement conditional compilation, allowing different features and behavior between development and production builds.
-
-### How It Works
-
-1. **Webpack Configuration**: The `__DEV__` constant is defined based on the build mode:
-   ```javascript
-   new webpack.DefinePlugin({
-     __DEV__: JSON.stringify(dev),  // true in development, false in production
-     'process.env.NODE_ENV': JSON.stringify(dev ? 'development' : 'production')
-   })
-   ```
-
-2. **Conditional Code Blocks**: Debug features are wrapped in conditional statements:
-   ```javascript
-   if (__DEV__) {
-     // Debug-only code here - will be completely removed in production builds
-     window.testRun = async function() { /* ... */ }
-   }
-   ```
-
-3. **UI Elements**: The TestRun button is hidden in production:
-   ```javascript
-   if (__DEV__) {
-     document.getElementById("testrun").onclick = window.testRun;
-   } else {
-     document.getElementById("testrun").style.display = "none";
-   }
-   ```
 
 
-### Build Modes
-
-| Command | Mode | __DEV__ | TestRun Button | Features |
-|---------|------|---------|----------------|----------|
-| `npm run dev-server` | development | `true` | Visible & Functional | All debug features |
-| `npm run build:dev` | development | `true` | Visible & Functional | All debug features |
-| `npm run build` | production | `false` | Hidden | Production only |
-| `npm run watch` | development | `true` | Visible & Functional | All debug features |
-
---- 365 Outlook Web Add-in that allows users to export an email thread to the OneNote notebook using the Microsoft Graph API.
-
----
-
-## 🚀 Features
-
-- Adds a ribbon button to 
-- Lets users choose a OneNote notebook via Microsoft Graph
-- Creates a section and adds one page per email in the selected thread
-
-### 🛠 Developer Features (Debug Mode Only)
-
-- **TestRun Function**: Available only in development builds for debugging purposes
-  - Displays the current email subject and sender information
-  - Retrieves and shows all emails in the currently selected thread/conversation
-  - Uses Exchange Web Services (EWS) to analyze conversation structure
-  - Provides detailed thread analysis including subjects, senders, and timestamps
-  - **Note**: This feature is automatically excluded from production builds
-
----
-
-## ⚙️ Prerequisites
-
-1. **Node.js** installed (https://nodejs.org/)
-2. **Office 365 Outlook** (Web or Desktop version)
-3. **Azure AD App Registration** with the following API permissions:
-   - `User.Read`
-   - `Mail.Read`
-   - `Notes.ReadWrite`
-4. **Trusted local HTTPS certificate**
-
----
-
-## 🛠 Setup Instructions
-
-### 1. Register an Azure AD App
-
-Go to [https://portal.azure.com](https://portal.azure.com):
-- Register a new app (e.g., "OutlookOneNoteAddin")
-- Add platform: `Single-page application` → `https://localhost:3000/taskpane.html`
-- Add API permissions:
-  - Microsoft Graph → Delegated → `User.Read`, `Mail.Read`, `Notes.ReadWrite`
-- Copy the `Application (client) ID` and replace `YOUR_CLIENT_ID_HERE` in `taskpane.js`
-
----
-
-### 3. Build and Launch
-
-#### Development Mode (with debug features)
-```cmd
-npm run dev-server
-```
-This starts the webpack dev server in development mode with:
-- Debug features enabled (TestRun button visible)
-- Hot reloading for faster development
-- Better source maps for debugging
-
-#### Production Build
-```cmd
-npm run build
-```
-This creates an optimized production build with:
-- Debug features excluded (TestRun button hidden)
-- Minified and optimized code
-- No development dependencies
-
-#### Alternative Development Commands
-```cmd
-npm start          # Launches development server
-npm run build:dev  # Creates development build without server
-npm run watch      # Watches for changes and rebuilds automatically
-``` 
-
-
-### 4. Sideload the Add-in in Outlook
-
-1. Open Outlook Web
-2. Go to ⚙️ Settings > View all Outlook settings > Mail > Customize actions > Add-ins
-3. Select “Upload custom add-in” → from file
-4. Choose your `manifest.xml` (must match local URLs)
-
----
-
-### 5. Test the Plugin
+### 6. Test the Plugin
 
 - Open an email thread
 - Click “Export to OneNote” from the ribbon
@@ -353,13 +337,6 @@ npm run watch      # Watches for changes and rebuilds automatically
 
 ---
 
-## 📁 Project Structure
-
-```
-
-```
-
----
 
 ## 🧪 Notes
 
