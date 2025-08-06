@@ -1,16 +1,32 @@
 
 # Outlook to OneNote Web Add-in
 
-This project is---
+This project is an Office Add-In for Outlook to export current email thread into OneNote as a set of pages
 
-### 5. Test the Plugin
 
-- Open an email thread
-- Click "Export to OneNote" from the ribbon
-- Authenticate with Microsoft account
-- Select notebook → A new section is created with one page per message
 
----
+
+## Workflow for using 
+
+### Validate the state
+
+Run npm run validate 
+
+Should produce list of platforms the Add In will run on, for example:
+
+```Based on the requirements specified in your manifest, your add-in can run on the following platforms; your add-in will be tested on these platforms when you submit it to the Office Store:
+  - Outlook on Windows (Microsoft 365)
+  - Outlook on Mac (Microsoft 365)
+  - Outlook on the web
+```
+
+### Side loading 
+When running local server during development use sideloading in Outlook to load Add In module from the local folder. Allows for source debugging. For the process of side loading refer to https://learn.microsoft.com/en-us/office/dev/add-ins/testing/sideload-office-add-ins-for-testing , it differs for various versions of Outlook
+
+
+### Production
+
+When tested and ready Add-In will be uploaded to AppSource
 
 ## 🐛 Debugging the Add-in
 
@@ -50,7 +66,6 @@ This project is---
 4. **Attach to Outlook Web**:
    - If using the attach configuration, first open Outlook Web
    - Sideload your add-in
-   - Use "Attach to Edge (Outlook Add-in)" configuration
    - VS Code will attach to the browser process
 
 #### Method 2: Browser Developer Tools
@@ -69,6 +84,10 @@ This project is---
 4. **Set Breakpoints**:
    - Click on line numbers in the source files
    - Blue dots indicate active breakpoints
+   - 
+### Method 3: Outlook New and developer tools
+
+Launch Outlook from the shortcut using command: olk.exe --devtools, then use devtools like in a browser. It may be necessary to add folder with source files for the Add-In to the dev tools to set breakpoints
 
 ### Debugging Configuration Files
 
@@ -232,12 +251,6 @@ This project uses webpack's `DefinePlugin` to implement conditional compilation,
    }
    ```
 
-### Benefits
-
-- **Smaller Production Bundles**: Debug code is completely eliminated from production builds
-- **Better Performance**: No runtime checks for debug features in production
-- **Secure**: Debug functionality cannot be accessed in production environment
-- **Developer Experience**: Full debugging capabilities during development
 
 ### Build Modes
 
@@ -254,7 +267,7 @@ This project uses webpack's `DefinePlugin` to implement conditional compilation,
 
 ## 🚀 Features
 
-- Adds a ribbon button to Outlook Web/Desktop
+- Adds a ribbon button to 
 - Lets users choose a OneNote notebook via Microsoft Graph
 - Creates a section and adds one page per email in the selected thread
 
