@@ -41,6 +41,16 @@
  
   <Permissions>ReadWriteMailbox</Permissions>
   
+  <!-- WebApplicationInfo for SSO -->
+  <WebApplicationInfo>
+    <Id>a73f5240-e06c-43a3-8328-1fbd80766263</Id>
+    <Resource>api://localhost:3000/a73f5240-e06c-43a3-8328-1fbd80766263</Resource>
+    <Scopes>
+      <Scope>https://graph.microsoft.com/Notes.Read</Scope>
+      <Scope>https://graph.microsoft.com/User.Read</Scope>
+    </Scopes>
+  </WebApplicationInfo>
+  
   <Rule xsi:type="RuleCollection" Mode="Or">
     <Rule xsi:type="ItemIs" ItemType="Message" FormType="Read"/>
   </Rule>

@@ -1,4 +1,10 @@
 
+import {
+  getSelectedNotebook,
+  setSelectedNotebook,
+  clearSelectedNotebook
+} from '../common/app-state.js';
+
 Office.onReady(() => {
   /** *
    * commands.js

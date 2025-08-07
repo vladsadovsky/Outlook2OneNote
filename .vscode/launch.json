@@ -5,6 +5,15 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Launch Grah API test",
+      "program": "${workspaceFolder}/src/test/graph-auth-test.js",
+      "request": "launch",
+      "skipFiles": [
+        "<node_internals>/**"
+      ],
+      "type": "node"
+    },
+    {
       "type": "msedge",
       "request": "launch",
       "name": "Launch Edge against localhost (Office Add-in)",
