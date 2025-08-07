@@ -3,7 +3,7 @@ const readline = require('readline');
 
 const config = {
   auth: {
-    clientId: 'YOUR_CLIENT_ID_HERE',
+    clientId: 'a73f5240-e06c-43a3-8328-1fbd80766263',
     authority: 'https://login.microsoftonline.com/common',
   }
 };
