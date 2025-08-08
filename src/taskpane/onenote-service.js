@@ -3,17 +3,24 @@
 /* eslint-disable no-console */
 
 /*
- * OneNote Service Module - onenote-service.js
+ * OneNote Service Module - onenote-service.js (Modernized with PKCE)
  * 
  * This module contains all OneNote-related functionality including:
- * - Getting OneNote notebooks via Microsoft Graph API
+ * - Getting OneNote notebooks via Microsoft Graph API with PKCE authentication
  * - Notebook selection UI and popup handling
  * - OneNote page creation and content export
- * - Authentication and token management for Graph API
+ * - Modern authentication with automatic token refresh
+ * 
+ * Authentication Improvements:
+ * - Primary PKCE OAuth 2.0 Authorization Code Flow
+ * - SSO fallback for Office Add-ins
+ * - Secure token storage and automatic refresh
+ * - No client secrets required
  * 
  * Dependencies:
  * - Office.js
  * - Microsoft Graph API
+ * - PKCE Authentication Module
  */
 
 import { 
@@ -24,17 +31,69 @@ import {
 
 import { 
   authenticateAndGetNotebooks,
-  getMockNotebooks
+  getMockNotebooks,
+  pkceAuth,
+  hasValidToken,
+  refreshToken,
+  handleAuthorizationCallback,
+  logout
 } from '../common/graphapi-auth.js';
 
-// Function to get OneNote notebooks using Microsoft Graph API
+// Function to get OneNote notebooks using modern PKCE authentication
 export async function getOneNoteNotebooks() {
   try {
-    console.log("Getting OneNote notebooks...");
-    return await authenticateAndGetNotebooks();
+    console.log("🚀 Getting OneNote notebooks with modern PKCE authentication...");
+    
+    // Check if we have a valid token first
+    const hasValid = await hasValidToken();
+    console.log("Has valid token:", hasValid);
+    
+    // If we don't have a valid token, try to refresh or start new auth flow
+    if (!hasValid) {
+      console.log("🔄 No valid token, attempting authentication...");
+    }
+    
+    // Attempt authentication - this will handle PKCE flow or fallback to SSO
+    const notebooks = await authenticateAndGetNotebooks();
+    
+    if (notebooks === null) {
+      // PKCE flow is in progress, user is being redirected
+      console.log("🔄 PKCE authentication flow started, waiting for user...");
+      
+      // Show user-friendly message while waiting
+      const insertAt = document.getElementById("item-subject");
+      if (insertAt) {
+        insertAt.innerHTML = "";
+        insertAt.appendChild(document.createTextNode("🔐 Redirecting to Microsoft for secure authentication..."));
+        insertAt.appendChild(document.createElement("br"));
+        insertAt.appendChild(document.createTextNode("Please complete the sign-in process and return here."));
+      }
+      
+      return null; // Indicate that auth flow is in progress
+    }
+    
+    if (notebooks && notebooks.length > 0) {
+      console.log(`✅ Successfully retrieved ${notebooks.length} OneNote notebooks`);
+      return notebooks;
+    } else {
+      console.log("📭 No notebooks found, using mock data");
+      return getMockNotebooks();
+    }
+    
   } catch (error) {
-    console.error("Error in getOneNoteNotebooks:", error);
-    // Return mock data for testing
+    console.error("❌ Error in getOneNoteNotebooks:", error);
+    
+    // Try to provide helpful error messages
+    if (error.message && error.message.includes('consent')) {
+      console.log("📝 User consent may be required for OneNote access");
+    }
+    
+    if (error.message && error.message.includes('token')) {
+      console.log("🔄 Token issue detected, may need to re-authenticate");
+    }
+    
+    // Return mock data for testing/development
+    console.log("🔧 Falling back to mock data for development");
     return getMockNotebooks();
   }
 }
@@ -254,5 +313,140 @@ export async function exportSingleEmailToOneNote(item, notebook, insertAt) {
   } catch (error) {
     console.error("Error exporting single email:", error);
     throw error;
+  }
+}
+
+// Modern authentication utility functions
+
+/**
+ * Check if user has valid authentication tokens
+ */
+export async function checkAuthenticationStatus() {
+  try {
+    const hasValid = await hasValidToken();
+    console.log("Authentication status check:", hasValid ? "Valid" : "Invalid/Missing");
+    return hasValid;
+  } catch (error) {
+    console.error("Error checking authentication status:", error);
+    return false;
+  }
+}
+
+/**
+ * Handle the OAuth authorization callback (for PKCE flow)
+ * This should be called when user returns from authorization
+ */
+export async function handleOAuthCallback() {
+  try {
+    console.log("🔄 Handling OAuth authorization callback...");
+    const notebooks = await handleAuthorizationCallback();
+    
+    if (notebooks && notebooks.length > 0) {
+      console.log("✅ OAuth callback handled successfully, got notebooks");
+      return notebooks;
+    } else {
+      console.log("⚠️ OAuth callback completed but no notebooks returned");
+      return [];
+    }
+  } catch (error) {
+    console.error("❌ OAuth callback handling failed:", error);
+    throw error;
+  }
+}
+
+/**
+ * Force refresh authentication tokens
+ */
+export async function refreshAuthenticationTokens() {
+  try {
+    console.log("🔄 Refreshing authentication tokens...");
+    await refreshToken();
+    console.log("✅ Tokens refreshed successfully");
+    return true;
+  } catch (error) {
+    console.error("❌ Token refresh failed:", error);
+    return false;
+  }
+}
+
+/**
+ * Clear authentication and logout user
+ */
+export async function logoutUser() {
+  try {
+    console.log("👋 Logging out user...");
+    await logout();
+    
+    // Clear local notebook selection
+    clearSelectedNotebook();
+    
+    // Update UI to reflect logout
+    const insertAt = document.getElementById("item-subject");
+    if (insertAt) {
+      insertAt.innerHTML = "";
+      insertAt.appendChild(document.createTextNode("👋 Logged out successfully. Click 'Choose Notebook' to sign in again."));
+    }
+    
+    console.log("✅ User logged out successfully");
+  } catch (error) {
+    console.error("❌ Logout failed:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get current authentication method being used
+ */
+export function getCurrentAuthMethod() {
+  // Check platform support and determine which auth method is active
+  try {
+    const support = pkceAuth.cryptoSupport || null;
+    
+    if (support && support.webCrypto) {
+      return 'PKCE OAuth 2.0';
+    } else if (typeof Office !== 'undefined' && Office.context && Office.context.auth) {
+      return 'Office.js SSO';
+    } else {
+      return 'Mock Data (Development)';
+    }
+  } catch (error) {
+    console.warn("Error determining auth method:", error);
+    return 'Unknown';
+  }
+}
+
+/**
+ * Show authentication status in UI
+ */
+export async function showAuthenticationStatus() {
+  const insertAt = document.getElementById("item-subject");
+  if (!insertAt) return;
+  
+  try {
+    const hasValid = await checkAuthenticationStatus();
+    const authMethod = getCurrentAuthMethod();
+    
+    insertAt.innerHTML = "";
+    insertAt.appendChild(document.createTextNode("🔐 Authentication Status"));
+    insertAt.appendChild(document.createElement("br"));
+    insertAt.appendChild(document.createElement("br"));
+    
+    insertAt.appendChild(document.createTextNode(`Method: ${authMethod}`));
+    insertAt.appendChild(document.createElement("br"));
+    
+    insertAt.appendChild(document.createTextNode(`Status: ${hasValid ? '✅ Valid' : '❌ Invalid/Missing'}`));
+    insertAt.appendChild(document.createElement("br"));
+    insertAt.appendChild(document.createElement("br"));
+    
+    if (hasValid) {
+      insertAt.appendChild(document.createTextNode("You can access OneNote notebooks."));
+    } else {
+      insertAt.appendChild(document.createTextNode("Click 'Choose Notebook' to authenticate."));
+    }
+    
+  } catch (error) {
+    console.error("Error showing authentication status:", error);
+    insertAt.innerHTML = "";
+    insertAt.appendChild(document.createTextNode("❌ Error checking authentication status: " + error.message));
   }
 }

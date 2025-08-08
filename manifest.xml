@@ -41,16 +41,6 @@
  
   <Permissions>ReadWriteMailbox</Permissions>
   
-  <!-- WebApplicationInfo for SSO -->
-  <WebApplicationInfo>
-    <Id>a73f5240-e06c-43a3-8328-1fbd80766263</Id>
-    <Resource>api://localhost:3000/a73f5240-e06c-43a3-8328-1fbd80766263</Resource>
-    <Scopes>
-      <Scope>https://graph.microsoft.com/Notes.Read</Scope>
-      <Scope>https://graph.microsoft.com/User.Read</Scope>
-    </Scopes>
-  </WebApplicationInfo>
-  
   <Rule xsi:type="RuleCollection" Mode="Or">
     <Rule xsi:type="ItemIs" ItemType="Message" FormType="Read"/>
   </Rule>
@@ -63,6 +53,7 @@
           <bt:Set Name="Mailbox" MinVersion="1.5"/>
         </bt:Sets>
       </Requirements>
+      
     <Hosts>
       <Host xsi:type="MailHost">
         <DesktopFormFactor>
@@ -128,5 +119,26 @@
         <bt:String id="ActionButton.Tooltip" DefaultValue="Export Email Thread to OneNote Section."/>
       </bt:LongStrings>
     </Resources>
+    
+    <!-- Nested VersionOverrides V1.1 for SSO -->
+    <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides/1.1" xsi:type="VersionOverridesV1_1">
+      <Requirements>
+        <bt:Sets DefaultMinVersion="1.5">
+          <bt:Set Name="Mailbox" MinVersion="1.5"/>
+        </bt:Sets>
+      </Requirements>
+      
+      <!-- WebApplicationInfo for SSO - properly nested in V1.1 -->
+      <WebApplicationInfo>
+        <Id>a73f5240-e06c-43a3-8328-1fbd80766263</Id>
+        <Resource>api://localhost:3000/a73f5240-e06c-43a3-8328-1fbd80766263</Resource>
+        <Scopes>
+          <Scope>https://graph.microsoft.com/Notes.Read</Scope>
+          <Scope>https://graph.microsoft.com/User.Read</Scope>
+          <Scope>profile</Scope>
+          <Scope>openid</Scope>
+        </Scopes>
+      </WebApplicationInfo>
+    </VersionOverrides>
   </VersionOverrides>
 </OfficeApp>
