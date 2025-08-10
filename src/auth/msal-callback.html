@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authentication - Outlook2OneNote</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 400px;
+        }
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #0078d4;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        h2 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        p {
+            color: #666;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="spinner"></div>
+        <h2>Completing Authentication...</h2>
+        <p>Please wait while we complete your sign-in process.</p>
+    </div>
+
+    <script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
+    <script>
+        console.log('MSAL Callback page loaded');
+        
+        // This page handles the redirect callback for MSAL authentication
+        // MSAL will automatically handle the token exchange and close this popup
+        try {
+            // Initialize MSAL with minimal configuration needed for callback
+            const msalInstance = new msal.PublicClientApplication({
+                auth: {
+                    clientId: "e1234567-e89b-12d3-a456-426614174000", // This will be replaced by webpack
+                    authority: "https://login.microsoftonline.com/consumers",
+                }
+            });
+
+            // Handle the redirect response
+            msalInstance.handleRedirectPromise()
+                .then(response => {
+                    console.log('MSAL redirect handled:', response);
+                    // MSAL will automatically close this popup/window
+                })
+                .catch(error => {
+                    console.error('MSAL redirect error:', error);
+                });
+                
+        } catch (error) {
+            console.error('MSAL callback initialization error:', error);
+        }
+    </script>
+</body>
+</html>

@@ -24,7 +24,7 @@
 export const AZURE_AD_CONFIG = {
   // Your Azure AD Application (client) ID
   // Replace this with your actual client ID from Azure AD App Registration
-  clientId: '12345678-1234-1234-1234-123456789abc',
+  clientId: ' a73f5240-e06c-43a3-8328-1fbd80766263',
   
   // Azure AD Authority URL
   // Use 'common' for multi-tenant, or your specific tenant ID for single tenant

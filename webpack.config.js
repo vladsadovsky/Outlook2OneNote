@@ -68,6 +68,14 @@ module.exports = async (env, options) => {
             to: "assets/[name][ext][query]",
           },
           {
+            from: "src/auth/callback.html",
+            to: "src/auth/callback.html",
+          },
+          {
+            from: "src/common/*.js",
+            to: "src/common/[name][ext]",
+          },
+          {
             from: "manifest*.xml",
             to: "[name]" + "[ext]",
             transform(content) {
@@ -95,6 +103,16 @@ module.exports = async (env, options) => {
         options: env.WEBPACK_BUILD || options.https !== undefined ? options.https : await getHttpsOptions(),
       },
       port: process.env.npm_package_config_dev_server_port || 3000,
+      static: {
+        directory: "./src",
+        publicPath: "/src",
+      },
+      historyApiFallback: {
+        rewrites: [
+          { from: /^\/src\/auth\/callback$/, to: '/src/auth/callback.html' },
+          { from: /^\/src\/auth\/msal-callback\.html$/, to: '/src/auth/msal-callback.html' }
+        ]
+      }
     },
   };
 

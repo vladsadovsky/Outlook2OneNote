@@ -38,7 +38,8 @@ import {
 import {
   getSelectedNotebook,
   setSelectedNotebook,
-  clearSelectedNotebook
+  clearSelectedNotebook,
+  initializeAppState
 } from '../common/app-state.js';
 
 import { dumpThread, getConversationDataForExport } from './email-service.js';
@@ -48,11 +49,17 @@ Office.onReady((info) => {
   console.log("Outlook2OneNote::Office.onReady");
 
   if (info.host === Office.HostType.Outlook) {
+    // Initialize app state from persistent storage
+    initializeAppState();
+    
     document.getElementById("sideload-msg").style.display = "none";
     document.getElementById("app-body").style.display = "flex";
     
+    // Update UI with previously selected notebook if available
+    updateNotebookUI();
+    
     // Only show dumpthread button in development mode
-    if (__DEV__) {
+    if (typeof __DEV__ !== 'undefined' && __DEV__) {
       document.getElementById("dumpthread").onclick = window.dumpThread;
     } else {
       // Hide dumpthread button in production
@@ -73,6 +80,23 @@ if (__DEV__) {
   window.dumpThread = dumpThread;
 }
 
+// Helper function to update the UI with the current notebook selection
+function updateNotebookUI() {
+  const selectedNotebook = getSelectedNotebook();
+  const insertAt = document.getElementById("item-subject");
+  
+  if (selectedNotebook) {
+    insertAt.innerHTML = "";
+    insertAt.appendChild(document.createTextNode(`✅ Selected Notebook: ${selectedNotebook.displayName || selectedNotebook.name || 'Unknown'}`));
+    insertAt.appendChild(document.createElement("br"));
+    insertAt.appendChild(document.createTextNode("You can use 'Export Thread' to export emails to this notebook, or choose a different notebook."));
+    console.log('📖 Displaying previously selected notebook:', selectedNotebook.displayName);
+  } else {
+    insertAt.innerHTML = "";
+    insertAt.appendChild(document.createTextNode("Please select a notebook using 'Choose Notebook' to get started."));
+  }
+}
+
 // Event handler: Choose OneNote notebook
 export async function chooseNotebook() {
   console.log("Outlook2OneNote::taskpane::chooseNotebook()");
@@ -81,10 +105,17 @@ export async function chooseNotebook() {
   const insertAt = document.getElementById("item-subject");
 
   try {
+    // Show loading state
+    insertAt.innerHTML = "";
+    insertAt.appendChild(document.createTextNode("🔐 Starting secure authentication..."));
+    
     const notebooks = await getOneNoteNotebooks();  
     if (notebooks && notebooks.length > 0) {
+      insertAt.innerHTML = "";
+      insertAt.appendChild(document.createTextNode(`Found ${notebooks.length} OneNote notebooks. Select one from the popup.`));
+      
       showNotebookPopup(notebooks, (notebook) => {
-        // Store the selected notebook globally
+        // Store the selected notebook globally with persistence
         setSelectedNotebook(notebook);
         console.log("Selected notebook stored:", notebook);
         
@@ -92,19 +123,16 @@ export async function chooseNotebook() {
         onNotebookSelected(notebook);
         
         // Update UI to show selected notebook
-        insertAt.innerHTML = "";
-        insertAt.appendChild(document.createTextNode(`Selected Notebook: ${notebook.displayName || notebook.name || 'Unknown'}`));
-        insertAt.appendChild(document.createElement("br"));
-        insertAt.appendChild(document.createTextNode("You can now use 'Export Thread' to export emails to this notebook."));
+        updateNotebookUI();
       });
     } else {
       insertAt.innerHTML = "";
-      insertAt.appendChild(document.createTextNode("No notebooks found."));
+      insertAt.appendChild(document.createTextNode("📭 No notebooks found or authentication cancelled."));
     } 
   } catch (error) {
     console.error("Error in chooseNotebook:", error);
     insertAt.innerHTML = "";
-    insertAt.appendChild(document.createTextNode("Error retrieving notebooks: " + error.message));
+    insertAt.appendChild(document.createTextNode("❌ Error retrieving notebooks: " + error.message));
   }
 }
 

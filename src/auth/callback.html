@@ -232,11 +232,13 @@
                 const code = urlParams.get('code');
                 const error = urlParams.get('error');
                 const errorDescription = urlParams.get('error_description');
+                const state = urlParams.get('state');
                 
                 console.log('URL Parameters:', {
                     hasCode: !!code,
                     hasError: !!error,
-                    errorDescription: errorDescription
+                    errorDescription: errorDescription,
+                    state: state
                 });
                 
                 // Handle authorization errors from Azure AD
@@ -248,36 +250,36 @@
                     throw new Error('Authorization code not found in callback URL');
                 }
                 
-                console.log('✅ Authorization code received, processing...');
+                console.log('✅ Authorization code received, passing to parent window');
                 
-                // Handle the authorization callback using PKCE authenticator
-                const notebooks = await pkceAuth.handleAuthorizationCallback();
-                
-                console.log('✅ Authorization callback handled successfully');
-                
-                // Show success state
-                const notebookCount = notebooks ? notebooks.length : 0;
-                showSuccessState(notebookCount);
-                
-                // Notify parent window if this is opened as a popup
+                // Instead of handling the callback here, pass the code to the main window
+                // The main window has access to the stored PKCE parameters
                 if (window.opener) {
                     try {
                         window.opener.postMessage({
-                            type: 'PKCE_AUTH_SUCCESS',
-                            notebooks: notebooks,
-                            notebookCount: notebookCount
+                            type: 'PKCE_AUTH_CODE',
+                            code: code,
+                            state: state
                         }, window.location.origin);
-                        console.log('✅ Notified parent window of successful authentication');
+                        console.log('✅ Sent authorization code to parent window');
+                        
+                        // Show success message while waiting for main window to process
+                        showSuccessState(0);
+                        
+                        // Auto-close after a short delay
+                        setTimeout(() => {
+                            window.close();
+                        }, 2000);
+                        
                     } catch (error) {
                         console.warn('Could not notify parent window:', error);
+                        throw error;
                     }
-                }
-                
-                // Auto-close after a delay if this is a popup
-                if (window.opener) {
-                    setTimeout(() => {
-                        window.close();
-                    }, 3000);
+                } else {
+                    // If not in popup, handle directly (fallback)
+                    console.log('Not in popup context, handling callback directly');
+                    const notebooks = await pkceAuth.handleAuthorizationCallback();
+                    showSuccessState(notebooks ? notebooks.length : 0);
                 }
                 
             } catch (error) {
