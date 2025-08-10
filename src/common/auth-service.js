@@ -239,7 +239,7 @@ class AuthService {
     /**
      * Make authenticated Graph API call
      */
-    async callGraphApi(endpoint, method = 'GET', body = null) {
+    async callGraphApi(endpoint, method = 'GET', body = null, customHeaders = null) {
         try {
             const token = await this.getAccessToken();
             if (!token) {
@@ -252,13 +252,23 @@ class AuthService {
                 'Content-Type': 'application/json'
             };
 
+            // Override with custom headers if provided
+            if (customHeaders) {
+                Object.assign(headers, customHeaders);
+            }
+
             const options = {
                 method: method,
                 headers: headers
             };
 
             if (body && (method === 'POST' || method === 'PATCH' || method === 'PUT')) {
-                options.body = JSON.stringify(body);
+                // Check if body is already a string (e.g., HTML content)
+                if (typeof body === 'string') {
+                    options.body = body;
+                } else {
+                    options.body = JSON.stringify(body);
+                }
             }
 
             const response = await fetch(`https://graph.microsoft.com/v1.0${endpoint}`, options);
@@ -290,6 +300,69 @@ class AuthService {
             return await response.json();
         } catch (error) {
             console.error('❌ Graph API call failed:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Check if we have a valid authentication token
+     * @returns {boolean} True if token is available, false otherwise
+     */
+    async hasValidToken() {
+        try {
+            // Check if we have a cached token
+            if (this.accessToken) {
+                return true;
+            }
+            
+            // Try to get a token without triggering authentication flow
+            // This will use silent authentication methods if available
+            const accounts = await this.msalInstance.getAllAccounts();
+            if (accounts.length > 0) {
+                try {
+                    const silentRequest = {
+                        scopes: this.scopes,
+                        account: accounts[0]
+                    };
+                    const response = await this.msalInstance.acquireTokenSilent(silentRequest);
+                    if (response && response.accessToken) {
+                        this.accessToken = response.accessToken;
+                        return true;
+                    }
+                } catch (silentError) {
+                    // Silent token acquisition failed, no valid token
+                    return false;
+                }
+            }
+            
+            return false;
+        } catch (error) {
+            console.error('❌ Error checking token validity:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Logout user and clear tokens
+     */
+    async logout() {
+        try {
+            console.log('🔄 Logging out user...');
+            
+            // Clear cached tokens
+            this.accessToken = null;
+            
+            // Clear MSAL cache
+            const accounts = await this.msalInstance.getAllAccounts();
+            if (accounts.length > 0) {
+                await this.msalInstance.logoutPopup({
+                    account: accounts[0]
+                });
+            }
+            
+            console.log('✅ User logged out successfully');
+        } catch (error) {
+            console.error('❌ Logout failed:', error);
             throw error;
         }
     }

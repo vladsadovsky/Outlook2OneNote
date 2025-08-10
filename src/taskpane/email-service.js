@@ -123,67 +123,50 @@ export async function getConversationDataForExport(conversationId) {
   console.log("Outlook2OneNote::email-service::getConversationDataForExport()");
   
   try {
-    // Ensure we have authentication - use the same method as OneNote service
-    const hasValidToken = await pkceAuth.hasValidToken();
-    if (!hasValidToken) {
-      console.log("🔄 No valid token, attempting authentication...");
-      // Trigger authentication using the same method as OneNote service
-      await pkceAuth.authenticateAndGetNotebooks();
+    // Ensure we have authentication using the new auth service
+    console.log('🔐 Checking authentication status for export...');
+    await authService.authenticate();
+    
+    // Get conversation messages via Graph API (reuse the logic from getConversationItemsViaGraph)
+    const allMessages = await authService.callGraphApi('/me/messages?$select=subject,from,receivedDateTime,bodyPreview,conversationId&$top=100');
+    
+    if (!allMessages || !allMessages.value) {
+      throw new Error('No messages returned from Microsoft Graph API');
     }
     
-    const accessToken = pkceAuth.getAccessToken();
-    if (!accessToken) {
-      throw new Error("Failed to retrieve access token for Microsoft Graph API after authentication");
-    }
-    
-    // Use Microsoft Graph API to get conversation messages
-    const graphUrl = `https://graph.microsoft.com/v1.0/me/messages?$filter=conversationId eq '${conversationId}'&$select=subject,sender,from,receivedDateTime,sentDateTime,body,bodyPreview&$orderby=receivedDateTime asc&$top=100`;
-    
-    const response = await fetch(graphUrl, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      }
+    // Filter messages by conversation ID (handle Base64 encoding differences)
+    const targetWithDashes = conversationId.replace(/\//g, '-');
+    const exportMessages = allMessages.value.filter(message => {
+      const msgId = message.conversationId;
+      return msgId === conversationId || msgId === targetWithDashes;
     });
     
-    if (!response.ok) {
-      throw new Error(`Microsoft Graph API request failed: ${response.status} ${response.statusText}`);
+    if (exportMessages.length === 0) {
+      console.warn('No messages found for conversation ID:', conversationId);
+      return [];
     }
     
-    const data = await response.json();
-    
-    if (data.error) {
-      throw new Error(`Microsoft Graph API Error: ${data.error.code} - ${data.error.message}`);
-    }
-    
-    const messages = data.value || [];
-    
-    // Transform messages to the expected format
-    const conversationData = messages.map(message => {
-      const senderName = message.sender?.emailAddress?.name || 
-                        message.from?.emailAddress?.name || 
-                        "Unknown sender";
-      const senderEmail = message.sender?.emailAddress?.address || 
-                         message.from?.emailAddress?.address || 
-                         "";
-      
-      return {
-        subject: message.subject || "No subject",
-        senderName,
-        senderEmail,
-        date: new Date(message.receivedDateTime || message.sentDateTime || new Date()),
-        body: message.body?.content || message.bodyPreview || "No content available",
-        bodyType: message.body?.contentType || "text"
-      };
+    // Sort messages by date (oldest first)
+    exportMessages.sort((a, b) => {
+      const dateA = new Date(a.receivedDateTime || 0);
+      const dateB = new Date(b.receivedDateTime || 0);
+      return dateA - dateB;
     });
     
-    console.log(`Retrieved ${conversationData.length} messages from conversation via Microsoft Graph API`);
-    return conversationData;
+    // Transform messages to export format
+    const exportData = exportMessages.map(message => ({
+      subject: message.subject || 'No Subject',
+      senderName: message.from?.emailAddress?.name || 'Unknown Sender',
+      senderEmail: message.from?.emailAddress?.address || '',
+      date: new Date(message.receivedDateTime || new Date()),
+      body: message.bodyPreview || 'No content available'
+    }));
+    
+    console.log(`📧 Retrieved ${exportData.length} messages for export`);
+    return exportData;
     
   } catch (error) {
-    console.error("Error retrieving conversation data via Microsoft Graph API:", error);
+    console.error("Error retrieving conversation data for export:", error);
     throw error;
   }
 }
