@@ -218,8 +218,16 @@ async function getConversationItemsViaGraph(conversationId, insertAt) {
     console.log(`📬 Retrieved ${allMessages.length} recent messages from Graph API`);
     
     // Filter messages by conversation ID client-side
-    const messages = allMessages.filter(message => message.conversationId === conversationId);
-    console.log(`🔍 Found ${messages.length} messages matching conversation ID: ${conversationId}`);
+    // Handle Base64 encoding differences: Graph API uses - where Office.js uses /
+    const targetWithDashes = conversationId.replace(/\//g, '-');
+    
+    const messages = allMessages.filter(message => {
+      const msgId = message.conversationId;
+      // Direct comparison and dash-converted comparison
+      return msgId === conversationId || msgId === targetWithDashes;
+    });
+    
+    console.log(`🔍 Found ${messages.length} messages matching conversation ID`);
     
     if (messages.length === 0) {
       insertAt.appendChild(document.createTextNode(`No messages found for conversation ID: ${conversationId}. Retrieved ${allMessages.length} recent messages but none matched.`));
