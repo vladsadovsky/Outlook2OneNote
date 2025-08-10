@@ -29,73 +29,63 @@ import {
   clearSelectedNotebook 
 } from '../common/app-state.js';
 
-import { 
-  authenticateAndGetNotebooks,
-  getMockNotebooks,
-  pkceAuth,
-  hasValidToken,
-  refreshToken,
-  handleAuthorizationCallback,
-  logout
-} from '../common/graphapi-auth.js';
+import authService from '../common/auth-service.js';
 
-// Function to get OneNote notebooks using modern PKCE authentication
+// Function to get OneNote notebooks using Office SSO-first authentication
 export async function getOneNoteNotebooks() {
   try {
-    console.log("🚀 Getting OneNote notebooks with modern PKCE authentication...");
+    console.log("� Getting OneNote notebooks with Office SSO-first authentication...");
     
-    // Check if we have a valid token first
-    const hasValid = await hasValidToken();
-    console.log("Has valid token:", hasValid);
+    // Ensure authentication (Office SSO first, then MSAL fallback)
+    await authService.authenticate();
     
-    // If we don't have a valid token, try to refresh or start new auth flow
-    if (!hasValid) {
-      console.log("🔄 No valid token, attempting authentication...");
-    }
+    // Get notebooks from Microsoft Graph API
+    console.log("� Fetching notebooks from Microsoft Graph API...");
+    const data = await authService.callGraphApi('/me/onenote/notebooks');
     
-    // Attempt authentication - this will handle PKCE flow or fallback to SSO
-    const notebooks = await authenticateAndGetNotebooks();
-    
-    if (notebooks === null) {
-      // PKCE flow is in progress, user is being redirected
-      console.log("🔄 PKCE authentication flow started, waiting for user...");
-      
-      // Show user-friendly message while waiting
-      const insertAt = document.getElementById("item-subject");
-      if (insertAt) {
-        insertAt.innerHTML = "";
-        insertAt.appendChild(document.createTextNode("🔐 Redirecting to Microsoft for secure authentication..."));
-        insertAt.appendChild(document.createElement("br"));
-        insertAt.appendChild(document.createTextNode("Please complete the sign-in process and return here."));
-      }
-      
-      return null; // Indicate that auth flow is in progress
-    }
-    
-    if (notebooks && notebooks.length > 0) {
-      console.log(`✅ Successfully retrieved ${notebooks.length} OneNote notebooks`);
-      return notebooks;
-    } else {
-      console.log("📭 No notebooks found, using mock data");
+    if (!data || !data.value) {
+      console.log('⚠️ No notebooks returned from Graph API');
       return getMockNotebooks();
     }
     
+    const notebooks = data.value;
+    console.log(`✅ Successfully retrieved ${notebooks.length} OneNote notebooks`);
+    
+    return notebooks;
+    
   } catch (error) {
-    console.error("❌ Error in getOneNoteNotebooks:", error);
+    console.error("❌ Error getting OneNote notebooks:", error);
     
-    // Try to provide helpful error messages
-    if (error.message && error.message.includes('consent')) {
-      console.log("📝 User consent may be required for OneNote access");
-    }
-    
-    if (error.message && error.message.includes('token')) {
-      console.log("🔄 Token issue detected, may need to re-authenticate");
-    }
-    
-    // Return mock data for testing/development
-    console.log("🔧 Falling back to mock data for development");
+    // Return mock data for development
+    console.log("� Using mock OneNote notebooks for development");
     return getMockNotebooks();
   }
+}
+
+// Mock notebooks for development/fallback
+function getMockNotebooks() {
+  return [
+    {
+      id: 'mock-notebook-1',
+      displayName: 'Test Notebook (Mock)',
+      isDefault: false,
+      userRole: 'Owner',
+      isShared: false,
+      sectionsUrl: 'mock-sections-url',
+      sectionGroupsUrl: 'mock-section-groups-url',
+      self: 'mock-self-url'
+    },
+    {
+      id: 'mock-notebook-2', 
+      displayName: 'Personal Notebook (Mock)',
+      isDefault: true,
+      userRole: 'Owner',
+      isShared: false,
+      sectionsUrl: 'mock-sections-url-2',
+      sectionGroupsUrl: 'mock-section-groups-url-2',
+      self: 'mock-self-url-2'
+    }
+  ];
 }
 
 // Function to show notebook selection popup
@@ -323,7 +313,7 @@ export async function exportSingleEmailToOneNote(item, notebook, insertAt) {
  */
 export async function checkAuthenticationStatus() {
   try {
-    const hasValid = await hasValidToken();
+    const hasValid = await pkceAuth.hasValidToken();
     console.log("Authentication status check:", hasValid ? "Valid" : "Invalid/Missing");
     return hasValid;
   } catch (error) {
@@ -339,7 +329,7 @@ export async function checkAuthenticationStatus() {
 export async function handleOAuthCallback() {
   try {
     console.log("🔄 Handling OAuth authorization callback...");
-    const notebooks = await handleAuthorizationCallback();
+    const notebooks = await pkceAuth.handleAuthorizationCallback();
     
     if (notebooks && notebooks.length > 0) {
       console.log("✅ OAuth callback handled successfully, got notebooks");
@@ -360,7 +350,7 @@ export async function handleOAuthCallback() {
 export async function refreshAuthenticationTokens() {
   try {
     console.log("🔄 Refreshing authentication tokens...");
-    await refreshToken();
+    await pkceAuth.refreshAccessToken();
     console.log("✅ Tokens refreshed successfully");
     return true;
   } catch (error) {
@@ -375,7 +365,7 @@ export async function refreshAuthenticationTokens() {
 export async function logoutUser() {
   try {
     console.log("👋 Logging out user...");
-    await logout();
+    await pkceAuth.logout();
     
     // Clear local notebook selection
     clearSelectedNotebook();

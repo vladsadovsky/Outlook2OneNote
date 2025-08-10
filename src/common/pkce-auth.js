@@ -33,13 +33,14 @@ import {
   checkCryptoSupport 
 } from './crypto-utils.js';
 
-import { getConfig } from './auth-config.js';
+import { getAuthConfig, validateEnvironmentConfig } from './env-config.js';
 
-// Get configuration
-const config = getConfig();
+// Get configuration from environment
+const config = getAuthConfig();
 const AUTH_CONFIG = config.azureAd;
 const PKCE_CONFIG = config.pkce;
 const STORAGE_CONFIG = config.storage;
+const ENDPOINTS = config.endpoints;
 
 // Storage keys for authentication data
 const STORAGE_KEYS = STORAGE_CONFIG.keys;
@@ -49,10 +50,19 @@ const STORAGE_KEYS = STORAGE_CONFIG.keys;
  */
 export class PKCEAuthenticator {
   constructor(customConfig = {}) {
-    // Merge custom configuration with defaults
+    // Validate environment configuration on initialization
+    try {
+      validateEnvironmentConfig();
+    } catch (error) {
+      console.error('Environment configuration validation failed:', error);
+      throw error;
+    }
+    
+    // Merge custom configuration with defaults from environment
     this.config = { ...AUTH_CONFIG, ...customConfig };
-    this.tokenEndpoint = `${this.config.authority}/oauth2/v2.0/token`;
-    this.authEndpoint = `${this.config.authority}/oauth2/v2.0/authorize`;
+    this.tokenEndpoint = ENDPOINTS.token;
+    this.authEndpoint = ENDPOINTS.auth;
+    this.backendEndpoint = ENDPOINTS.backend;
     
     // Check crypto support on initialization
     this.cryptoSupport = checkCryptoSupport();
@@ -61,7 +71,8 @@ export class PKCEAuthenticator {
       clientId: this.config.clientId,
       authority: this.config.authority,
       scopes: this.config.scopes,
-      cryptoSupport: this.cryptoSupport
+      cryptoSupport: this.cryptoSupport,
+      hasBackendEndpoint: !!this.backendEndpoint
     });
   }
 
@@ -70,7 +81,7 @@ export class PKCEAuthenticator {
    * 
    * Authentication Priority:
    * 1. Existing valid tokens (silent authentication)
-   * 2. PKCE Authorization Code Flow
+   * 2. PKCE Authorization Code Flow (popup-based)
    * 3. SSO fallback (Office Add-ins)
    * 4. Mock data (development/testing)
    */
@@ -91,13 +102,17 @@ export class PKCEAuthenticator {
         return await this.getNotebooks();
       }
       
-      // Start PKCE authorization flow
+      // Start PKCE authorization flow (popup-based)
       console.log('🚀 Starting PKCE authorization code flow');
-      await this.startPKCEFlow();
+      const notebooks = await this.startPKCEFlow();
       
-      // The flow will continue when user returns from authorization
-      // This is handled by handleAuthorizationCallback()
-      return null; // Indicates that auth flow is in progress
+      if (notebooks) {
+        console.log('✅ PKCE authentication completed successfully');
+        return notebooks;
+      }
+      
+      // If no notebooks returned, try to get them
+      return await this.getNotebooks();
       
     } catch (error) {
       console.error('PKCE authentication failed:', error);
@@ -114,14 +129,14 @@ export class PKCEAuthenticator {
         return this.getMockNotebooks();
       }
     }
-  }
-
-  /**
-   * Starts the PKCE authorization code flow
-   * Redirects user to Azure AD authorization endpoint
+  }  /**
+   * Starts the PKCE authorization code flow using popup window
+   * This is better for Office Add-ins as it doesn't navigate away from the taskpane
    */
   async startPKCEFlow() {
     try {
+      console.log('🚀 Starting PKCE flow with popup...');
+      
       // Generate PKCE parameters
       const codeVerifier = generateCodeVerifier();
       const codeChallenge = await generateCodeChallenge(codeVerifier);
@@ -139,10 +154,102 @@ export class PKCEAuthenticator {
       // Build authorization URL
       const authUrl = this.buildAuthorizationUrl(codeChallenge, state);
       
-      console.log('🔗 Redirecting to authorization URL:', authUrl);
+      console.log('🔗 Opening authorization popup:', authUrl);
+      console.log('🔧 Popup dimensions: 600x700');
       
-      // Redirect to Azure AD authorization endpoint
-      window.location.href = authUrl;
+      // Use popup for Office Add-in environment
+      return new Promise((resolve, reject) => {
+        const popup = window.open(
+          authUrl,
+          'pkce-auth-popup',
+          'width=600,height=700,scrollbars=yes,resizable=yes,location=yes,status=yes,menubar=no,toolbar=no'
+        );
+        
+        if (!popup) {
+          console.error('❌ Failed to open popup - likely blocked by browser');
+          reject(new Error('Failed to open authentication popup. Please allow popups for this site and try again.'));
+          return;
+        }
+        
+        console.log('✅ Popup opened successfully');
+        
+        // Listen for messages from the popup
+        const messageHandler = async (event) => {
+          console.log('📨 Received message from popup:', event.data, 'Origin:', event.origin);
+          
+          if (event.origin !== window.location.origin) {
+            console.warn('⚠️ Ignoring message from different origin:', event.origin);
+            return;
+          }
+          
+          if (event.data.type === 'PKCE_AUTH_CODE') {
+            console.log('🔑 Received authorization code from popup, processing in main window');
+            
+            try {
+              // Validate state parameter in main window context
+              const storedState = this.retrieveSecurely(STORAGE_KEYS.STATE);
+              if (event.data.state !== storedState) {
+                console.error('State mismatch:', { received: event.data.state, stored: storedState });
+                throw new Error('Invalid state parameter - possible CSRF attack');
+              }
+              
+              // Exchange code for tokens in main window (has access to code verifier)
+              const tokens = await this.exchangeCodeForTokens(event.data.code);
+              
+              // Store tokens in main window
+              await this.storeTokens(tokens);
+              
+              console.log('✅ Token exchange completed in main window');
+              
+              // Get notebooks
+              const notebooks = await this.getNotebooks();
+              
+              // Clean up auth state
+              this.cleanupAuthState();
+              
+              window.removeEventListener('message', messageHandler);
+              popup.close();
+              resolve(notebooks);
+              
+            } catch (error) {
+              console.error('❌ Token exchange failed in main window:', error);
+              window.removeEventListener('message', messageHandler);
+              popup.close();
+              reject(error);
+            }
+            
+          } else if (event.data.type === 'PKCE_AUTH_SUCCESS') {
+            console.log('✅ Authentication successful via popup');
+            
+            // Store the access token in the main window's session storage
+            if (event.data.accessToken) {
+              console.log('🔑 Storing access token from popup in main window');
+              this.storeSecurely(STORAGE_KEYS.ACCESS_TOKEN, event.data.accessToken);
+            }
+            
+            window.removeEventListener('message', messageHandler);
+            popup.close();
+            resolve(event.data.notebooks);
+          } else if (event.data.type === 'PKCE_AUTH_ERROR') {
+            console.error('❌ Authentication error via popup:', event.data.error);
+            window.removeEventListener('message', messageHandler);
+            popup.close();
+            reject(new Error(event.data.error));
+          }
+        };
+        
+        window.addEventListener('message', messageHandler);
+        
+        // Check if popup was closed by user
+        const checkClosed = setInterval(() => {
+          if (popup.closed) {
+            console.log('⚠️ Popup was closed by user');
+            clearInterval(checkClosed);
+            window.removeEventListener('message', messageHandler);
+            reject(new Error('Authentication cancelled by user - popup was closed'));
+          }
+        }, 1000);
+      });
       
     } catch (error) {
       console.error('Failed to start PKCE flow:', error);
@@ -226,6 +333,7 @@ export class PKCEAuthenticator {
 
   /**
    * Exchanges authorization code for access and refresh tokens
+   * Supports both PKCE (client-side) and client secret (backend) flows
    */
   async exchangeCodeForTokens(authorizationCode) {
     try {
@@ -235,52 +343,115 @@ export class PKCEAuthenticator {
         throw new Error('Code verifier not found - PKCE flow was not properly initialized');
       }
       
-      // Prepare token exchange request
-      const tokenRequest = {
-        client_id: this.config.clientId,
-        code: authorizationCode,
-        redirect_uri: this.config.redirectUri,
-        grant_type: 'authorization_code',
-        code_verifier: codeVerifier
-      };
-      
-      console.log('🔄 Exchanging authorization code for tokens');
-      
-      const response = await fetch(this.tokenEndpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Accept': 'application/json'
-        },
-        body: new URLSearchParams(tokenRequest)
-      });
-      
-      const responseData = await response.json();
-      
-      if (!response.ok) {
-        console.error('Token exchange failed:', responseData);
-        throw new Error(`Token exchange failed: ${responseData.error} - ${responseData.error_description}`);
+      // Try backend token exchange first (more secure)
+      if (this.backendEndpoint) {
+        try {
+          return await this.exchangeCodeViaBackend(authorizationCode, codeVerifier);
+        } catch (backendError) {
+          console.warn('Backend token exchange failed, falling back to client-side PKCE:', backendError);
+        }
       }
       
-      // Validate token response
-      if (!responseData.access_token) {
-        throw new Error('Access token not received in token response');
-      }
-      
-      console.log('✅ Tokens received successfully');
-      
-      return {
-        accessToken: responseData.access_token,
-        refreshToken: responseData.refresh_token,
-        expiresIn: responseData.expires_in,
-        tokenType: responseData.token_type,
-        scope: responseData.scope
-      };
+      // Fallback to client-side PKCE token exchange
+      return await this.exchangeCodeViaPKCE(authorizationCode, codeVerifier);
       
     } catch (error) {
       console.error('Token exchange failed:', error);
       throw new Error(`Failed to exchange authorization code: ${error.message}`);
     }
+  }
+
+  /**
+   * Exchange authorization code via backend service (recommended)
+   * Backend service uses client secret for enhanced security
+   */
+  async exchangeCodeViaBackend(authorizationCode, codeVerifier) {
+    console.log('🔄 Exchanging authorization code via backend service');
+    
+    const backendRequest = {
+      code: authorizationCode,
+      codeVerifier: codeVerifier,
+      redirectUri: this.config.redirectUri
+    };
+    
+    const response = await fetch(`${this.backendEndpoint}/api/auth/exchange-code`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(backendRequest)
+    });
+    
+    const responseData = await response.json();
+    
+    if (!response.ok) {
+      console.error('Backend token exchange failed:', responseData);
+      throw new Error(`Backend token exchange failed: ${responseData.error} - ${responseData.error_description}`);
+    }
+    
+    // Validate token response
+    if (!responseData.access_token) {
+      throw new Error('Access token not received from backend');
+    }
+    
+    console.log('✅ Tokens received from backend service');
+    
+    return {
+      accessToken: responseData.access_token,
+      refreshToken: responseData.refresh_token,
+      expiresIn: responseData.expires_in,
+      tokenType: responseData.token_type,
+      scope: responseData.scope
+    };
+  }
+
+  /**
+   * Exchange authorization code via client-side PKCE (fallback)
+   * Uses PKCE without client secret
+   */
+  async exchangeCodeViaPKCE(authorizationCode, codeVerifier) {
+    console.log('🔄 Exchanging authorization code via client-side PKCE');
+    
+    // Prepare token exchange request
+    const tokenRequest = {
+      client_id: this.config.clientId,
+      code: authorizationCode,
+      redirect_uri: this.config.redirectUri,
+      grant_type: 'authorization_code',
+      code_verifier: codeVerifier
+    };
+    
+    const response = await fetch(this.tokenEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Accept': 'application/json'
+      },
+      body: new URLSearchParams(tokenRequest)
+    });
+    
+    const responseData = await response.json();
+    
+    if (!response.ok) {
+      console.error('PKCE token exchange failed:', responseData);
+      throw new Error(`PKCE token exchange failed: ${responseData.error} - ${responseData.error_description}`);
+    }
+    
+    // Validate token response
+    if (!responseData.access_token) {
+      throw new Error('Access token not received in PKCE response');
+    }
+    
+    console.log('✅ Tokens received via PKCE flow');
+    
+    return {
+      accessToken: responseData.access_token,
+      refreshToken: responseData.refresh_token,
+      expiresIn: responseData.expires_in,
+      tokenType: responseData.token_type,
+      scope: responseData.scope
+    };
   }
 
   /**
@@ -477,6 +648,14 @@ export class PKCEAuthenticator {
   async canRefreshToken() {
     const refreshToken = this.retrieveSecurely(STORAGE_KEYS.REFRESH_TOKEN);
     return !!refreshToken;
+  }
+
+  /**
+   * Get current access token
+   * @returns {string|null} The access token or null if not available
+   */
+  getAccessToken() {
+    return this.retrieveSecurely(STORAGE_KEYS.ACCESS_TOKEN);
   }
 
   /**

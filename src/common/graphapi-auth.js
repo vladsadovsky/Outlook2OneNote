@@ -75,7 +75,7 @@ export async function authenticateAndGetNotebooks() {
   
   // Try PKCE authentication first (primary method)
   if (platformSupport.supportsPKCE) {
-    try {
+    try {4
       console.log("🚀 Attempting PKCE OAuth 2.0 authentication (primary method)");
       
       // Use the PKCE authenticator
@@ -344,6 +344,61 @@ export async function refreshToken() {
     console.log("✅ Token refreshed successfully");
   } catch (error) {
     console.error("Token refresh failed:", error);
+    throw error;
+  }
+}
+
+// Backend token exchange using CLIENT_SECRET from environment
+export async function tryBackendTokenExchange(config) {
+  if (!config.endpoints.backend) {
+    throw new Error('Backend service URL not configured in environment');
+  }
+  
+  try {
+    console.log('🔄 Attempting backend token exchange with CLIENT_SECRET...');
+    
+    // Call backend service that uses CLIENT_SECRET for enhanced security
+    const response = await fetch(`${config.endpoints.backend}/api/auth/get-notebooks`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        clientId: config.azureAd.clientId,
+        scopes: config.azureAd.scopes
+      })
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.text();
+      throw new Error(`Backend request failed: ${response.status} - ${errorData}`);
+    }
+    
+    const data = await response.json();
+    
+    if (data.notebooks && data.notebooks.value) {
+      const notebooks = data.notebooks.value.map(notebook => ({
+        id: notebook.id,
+        name: notebook.displayName,
+        displayName: notebook.displayName,
+        createdDateTime: notebook.createdDateTime,
+        lastModifiedDateTime: notebook.lastModifiedDateTime,
+        isDefault: notebook.isDefault || false,
+        sectionsUrl: notebook.sectionsUrl,
+        sectionGroupsUrl: notebook.sectionGroupsUrl,
+        links: notebook.links
+      }));
+      
+      console.log(`✅ Backend token exchange successful - got ${notebooks.length} real notebooks`);
+      return notebooks;
+    } else {
+      console.log("📭 No notebooks returned from backend service");
+      return [];
+    }
+    
+  } catch (error) {
+    console.error('❌ Backend token exchange failed:', error);
     throw error;
   }
 }

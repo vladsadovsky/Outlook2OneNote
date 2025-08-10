@@ -3,6 +3,29 @@
 
 This project is an Office Add-In for Outlook to export current email thread into OneNote as a set of pages
 
+## Quick Setup
+
+1. **Environment Configuration:**
+   ```bash
+   cp .env-template .env
+   ```
+   Then update `.env` with your Azure AD app configuration. See [ENVIRONMENT-SETUP.md](ENVIRONMENT-SETUP.md) for detailed instructions.
+
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+3. **Validate your environment configuration:**
+   ```bash
+   npm run validate-env
+   ```
+
+4. **Start development server:**
+   ```bash
+   npm run dev-server
+   ```
+
 ## Usage and features
 
 Add-In in production usage will appear in Microsoft Office app and Add-Ins discovery service (AppSource). Follow guidelines how to install new Add-In.

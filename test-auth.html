@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Auth Service Test</title>
+    <meta charset="utf-8" />
+    <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+</head>
+<body>
+    <h2>🔧 Authentication Service Test</h2>
+    <p>This page tests the new Office SSO-first authentication service.</p>
+    
+    <div>
+        <button id="testAuth" style="padding: 10px; margin: 5px;">🔐 Test Authentication</button>
+        <button id="testNotebooks" style="padding: 10px; margin: 5px;">📔 Test OneNote API</button>
+        <button id="testEmail" style="padding: 10px; margin: 5px;">📧 Test Mail API</button>
+        <button id="signOut" style="padding: 10px; margin: 5px;">🚪 Sign Out</button>
+    </div>
+    
+    <div id="results" style="margin-top: 20px; padding: 10px; border: 1px solid #ddd; min-height: 200px; font-family: monospace; white-space: pre-wrap;"></div>
+
+    <script type="module">
+        import authService from './src/common/auth-service.js';
+        
+        const results = document.getElementById('results');
+        
+        function log(message) {
+            results.textContent += new Date().toLocaleTimeString() + ': ' + message + '\n';
+            results.scrollTop = results.scrollHeight;
+        }
+        
+        document.getElementById('testAuth').addEventListener('click', async () => {
+            try {
+                log('🔐 Testing authentication...');
+                const token = await authService.authenticate();
+                log('✅ Authentication successful!');
+                log('Token length: ' + (token ? token.length : 'null'));
+                
+                const user = authService.getCurrentUser();
+                if (user) {
+                    log('👤 User: ' + user.username);
+                }
+            } catch (error) {
+                log('❌ Authentication failed: ' + error.message);
+            }
+        });
+        
+        document.getElementById('testNotebooks').addEventListener('click', async () => {
+            try {
+                log('📔 Testing OneNote API...');
+                const data = await authService.callGraphApi('/me/onenote/notebooks');
+                log('✅ OneNote API successful!');
+                log('Notebooks found: ' + (data.value ? data.value.length : 0));
+                
+                if (data.value && data.value.length > 0) {
+                    data.value.slice(0, 3).forEach((notebook, i) => {
+                        log(`  ${i+1}. ${notebook.displayName}`);
+                    });
+                }
+            } catch (error) {
+                log('❌ OneNote API failed: ' + error.message);
+            }
+        });
+        
+        document.getElementById('testEmail').addEventListener('click', async () => {
+            try {
+                log('📧 Testing Mail API...');
+                const data = await authService.callGraphApi('/me/messages?$top=5');
+                log('✅ Mail API successful!');
+                log('Messages found: ' + (data.value ? data.value.length : 0));
+                
+                if (data.value && data.value.length > 0) {
+                    data.value.forEach((message, i) => {
+                        log(`  ${i+1}. ${message.subject || 'No subject'}`);
+                    });
+                }
+            } catch (error) {
+                log('❌ Mail API failed: ' + error.message);
+            }
+        });
+        
+        document.getElementById('signOut').addEventListener('click', async () => {
+            try {
+                log('🚪 Signing out...');
+                await authService.signOut();
+                log('✅ Signed out successfully');
+            } catch (error) {
+                log('❌ Sign out failed: ' + error.message);
+            }
+        });
+        
+        // Initialize when DOM is ready
+        log('🚀 Auth service test page ready');
+        log('Click buttons above to test authentication functionality');
+    </script>
+</body>
+</html>

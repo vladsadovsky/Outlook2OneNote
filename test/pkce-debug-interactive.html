@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PKCE Authentication Flow Debugger</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .phase {
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            background: #fafafa;
+        }
+        
+        .phase.active {
+            border-color: #0078d4;
+            background: #f0f8ff;
+        }
+        
+        .phase.success {
+            border-color: #107c10;
+            background: #f0fff0;
+        }
+        
+        .phase.error {
+            border-color: #d13438;
+            background: #fff0f0;
+        }
+        
+        h1 {
+            color: #0078d4;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        h2 {
+            color: #323130;
+            border-bottom: 2px solid #0078d4;
+            padding-bottom: 10px;
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        
+        .status.pending {
+            background: #fff4ce;
+            color: #8a8886;
+        }
+        
+        .status.success {
+            background: #dff6dd;
+            color: #107c10;
+        }
+        
+        .status.error {
+            background: #fde7e9;
+            color: #d13438;
+        }
+        
+        button {
+            background: #0078d4;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        
+        button:hover {
+            background: #106ebe;
+        }
+        
+        button:disabled {
+            background: #c8c6c4;
+            cursor: not-allowed;
+        }
+        
+        .output {
+            background: #f8f8f8;
+            border: 1px solid #d0d0d0;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .success-text {
+            color: #107c10;
+        }
+        
+        .error-text {
+            color: #d13438;
+        }
+        
+        .info-text {
+            color: #0078d4;
+        }
+        
+        .warning-text {
+            color: #f7630c;
+        }
+        
+        .url-display {
+            word-break: break-all;
+            background: #f0f8ff;
+            padding: 10px;
+            border-left: 4px solid #0078d4;
+            margin: 10px 0;
+        }
+        
+        .token-display {
+            background: #f0fff0;
+            padding: 10px;
+            border-left: 4px solid #107c10;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 11px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        
+        .config-section {
+            background: #fff9e6;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        
+        .step-controls {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        .debug-info {
+            background: #f3f2f1;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 PKCE Authentication Flow Debugger</h1>
+        <p><strong>Purpose:</strong> Test and debug the PKCE (Proof Key for Code Exchange) OAuth 2.0 flow step by step.</p>
+        
+        <div class="config-section">
+            <h3>📋 Current Configuration</h3>
+            <div id="config-display">Loading configuration...</div>
+            <button onclick="loadConfiguration()">🔄 Reload Configuration</button>
+        </div>
+    </div>
+
+    <!-- Phase 1: Environment & Crypto Setup -->
+    <div class="phase" id="phase1">
+        <h2>Phase 1: Environment & Crypto Setup <span class="status pending" id="phase1-status">Pending</span></h2>
+        <p>Verify environment configuration and test crypto utilities for PKCE code generation.</p>
+        
+        <div class="step-controls">
+            <button onclick="testCryptoUtils()">🔧 Test Crypto Utils</button>
+            <button onclick="generatePKCEChallenge()">🎲 Generate PKCE Challenge</button>
+            <button onclick="testEnvironmentConfig()">🌍 Test Environment Config</button>
+        </div>
+        
+        <div class="output" id="phase1-output"></div>
+        
+        <div class="debug-info">
+            <strong>What this tests:</strong>
+            <ul>
+                <li>Environment variable loading from .env file</li>
+                <li>PKCE code verifier generation (cryptographically secure random string)</li>
+                <li>PKCE code challenge creation (SHA256 hash, base64url encoded)</li>
+                <li>Configuration validation</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Phase 2: Authorization URL Generation -->
+    <div class="phase" id="phase2">
+        <h2>Phase 2: Authorization URL Generation <span class="status pending" id="phase2-status">Pending</span></h2>
+        <p>Generate the Azure AD authorization URL with PKCE parameters.</p>
+        
+        <div class="step-controls">
+            <button onclick="buildAuthorizationURL()">🔗 Build Authorization URL</button>
+            <button onclick="testAuthorizationURL()" disabled id="test-auth-url-btn">🌐 Test URL (Open in New Tab)</button>
+        </div>
+        
+        <div class="output" id="phase2-output"></div>
+        <div class="url-display" id="auth-url-display" style="display:none;"></div>
+        
+        <div class="debug-info">
+            <strong>What this tests:</strong>
+            <ul>
+                <li>Authorization URL construction with correct parameters</li>
+                <li>PKCE code_challenge and code_challenge_method parameters</li>
+                <li>Proper scope and redirect_uri configuration</li>
+                <li>State parameter for CSRF protection</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Phase 3: Authorization Code Simulation -->
+    <div class="phase" id="phase3">
+        <h2>Phase 3: Authorization Code Simulation <span class="status pending" id="phase3-status">Pending</span></h2>
+        <p>Simulate receiving an authorization code from Azure AD callback.</p>
+        
+        <div class="step-controls">
+            <button onclick="simulateAuthorizationCode()">📝 Simulate Authorization Code</button>
+            <button onclick="parseCallbackURL()">🔍 Parse Callback URL</button>
+            <input type="text" id="callback-url-input" placeholder="Paste callback URL here..." style="width: 400px; padding: 8px; margin: 5px;">
+        </div>
+        
+        <div class="output" id="phase3-output"></div>
+        
+        <div class="debug-info">
+            <strong>What this tests:</strong>
+            <ul>
+                <li>Authorization code extraction from callback URL</li>
+                <li>State parameter validation</li>
+                <li>Error handling for authorization failures</li>
+                <li>URL parsing and parameter extraction</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Phase 4: Token Exchange -->
+    <div class="phase" id="phase4">
+        <h2>Phase 4: Token Exchange <span class="status pending" id="phase4-status">Pending</span></h2>
+        <p>Exchange authorization code for access tokens using PKCE.</p>
+        
+        <div class="step-controls">
+            <button onclick="exchangeCodeForTokens()" disabled id="exchange-tokens-btn">🔄 Exchange Code for Tokens</button>
+            <button onclick="testBackendExchange()" disabled id="backend-exchange-btn">🖥️ Test Backend Exchange</button>
+        </div>
+        
+        <div class="output" id="phase4-output"></div>
+        <div class="token-display" id="token-display" style="display:none;"></div>
+        
+        <div class="debug-info">
+            <strong>What this tests:</strong>
+            <ul>
+                <li>PKCE token exchange with code_verifier</li>
+                <li>Backend service token exchange (fallback)</li>
+                <li>Token response parsing and validation</li>
+                <li>Error handling for exchange failures</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Phase 5: Graph API Testing -->
+    <div class="phase" id="phase5">
+        <h2>Phase 5: Graph API Testing <span class="status pending" id="phase5-status">Pending</span></h2>
+        <p>Test the access token with Microsoft Graph API calls.</p>
+        
+        <div class="step-controls">
+            <button onclick="testGraphAPIUser()" disabled id="test-user-btn">👤 Test User Profile</button>
+            <button onclick="testGraphAPINotebooks()" disabled id="test-notebooks-btn">📚 Test OneNote Notebooks</button>
+            <button onclick="validateToken()" disabled id="validate-token-btn">🔍 Validate Token</button>
+        </div>
+        
+        <div class="output" id="phase5-output"></div>
+        
+        <div class="debug-info">
+            <strong>What this tests:</strong>
+            <ul>
+                <li>Access token functionality with Graph API</li>
+                <li>OneNote API access and permissions</li>
+                <li>Token expiration and refresh handling</li>
+                <li>Error handling for API failures</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Global Debug Console -->
+    <div class="container">
+        <h2>🐛 Debug Console</h2>
+        <div class="step-controls">
+            <button onclick="clearDebugConsole()">🗑️ Clear Console</button>
+            <button onclick="exportDebugLog()">📥 Export Debug Log</button>
+            <button onclick="resetAllPhases()">🔄 Reset All Phases</button>
+        </div>
+        <div class="output" id="debug-console" style="height: 300px;"></div>
+    </div>
+
+    <script type="module">
+        // Import our PKCE authentication and utilities
+        import { PKCEAuthenticator } from '../src/common/pkce-auth.js';
+        import { getAuthConfig, validateEnvironmentConfig } from '../src/common/env-config.js';
+        import { generateCodeVerifier, generateCodeChallenge, generateRandomString } from '../src/common/crypto-utils.js';
+
+        // Global state for the debugging session
+        window.debugState = {
+            codeVerifier: null,
+            codeChallenge: null,
+            state: null,
+            authorizationCode: null,
+            accessToken: null,
+            refreshToken: null,
+            authConfig: null,
+            pkceAuthenticator: null
+        };
+
+        // Utility functions for logging and UI updates
+        window.logToPhase = function(phaseId, message, type = 'info') {
+            const output = document.getElementById(`${phaseId}-output`);
+            const timestamp = new Date().toLocaleTimeString();
+            const colorClass = type === 'error' ? 'error-text' : 
+                              type === 'success' ? 'success-text' : 
+                              type === 'warning' ? 'warning-text' : 'info-text';
+            
+            output.innerHTML += `<div class="${colorClass}">[${timestamp}] ${message}</div>`;
+            output.scrollTop = output.scrollHeight;
+            
+            // Also log to debug console
+            const debugConsole = document.getElementById('debug-console');
+            debugConsole.innerHTML += `<div class="${colorClass}">[${timestamp}] [${phaseId.toUpperCase()}] ${message}</div>`;
+            debugConsole.scrollTop = debugConsole.scrollHeight;
+        };
+
+        window.updatePhaseStatus = function(phaseId, status) {
+            const statusElement = document.getElementById(`${phaseId}-status`);
+            const phaseElement = document.getElementById(phaseId);
+            
+            statusElement.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+            statusElement.className = `status ${status}`;
+            
+            phaseElement.className = `phase ${status}`;
+        };
+
+        // Phase 1: Environment & Crypto Setup
+        window.loadConfiguration = async function() {
+            try {
+                logToPhase('debug', 'Loading environment configuration...', 'info');
+                
+                const config = await getAuthConfig();
+                window.debugState.authConfig = config;
+                
+                const configDisplay = document.getElementById('config-display');
+                configDisplay.innerHTML = `
+                    <strong>CLIENT_ID:</strong> ${config.clientId || 'Not set'}<br>
+                    <strong>TENANT_ID:</strong> ${config.tenantId || 'Not set'}<br>
+                    <strong>AUTHORITY:</strong> ${config.authority || 'Not set'}<br>
+                    <strong>REDIRECT_URI:</strong> ${config.redirectUri || 'Not set'}<br>
+                    <strong>SCOPES:</strong> ${config.scopes?.join(', ') || 'Not set'}
+                `;
+                
+                logToPhase('debug', 'Configuration loaded successfully', 'success');
+            } catch (error) {
+                logToPhase('debug', `Failed to load configuration: ${error.message}`, 'error');
+                const configDisplay = document.getElementById('config-display');
+                configDisplay.innerHTML = `<span class="error-text">Failed to load configuration: ${error.message}</span>`;
+            }
+        };
+
+        window.testCryptoUtils = async function() {
+            updatePhaseStatus('phase1', 'active');
+            logToPhase('phase1', 'Testing crypto utilities...', 'info');
+            
+            try {
+                // Test random string generation
+                const randomString = generateRandomString(32);
+                logToPhase('phase1', `✅ Random string generated: ${randomString.substring(0, 10)}...`, 'success');
+                
+                // Test code verifier generation
+                const codeVerifier = generateCodeVerifier();
+                logToPhase('phase1', `✅ Code verifier generated: ${codeVerifier.substring(0, 10)}... (length: ${codeVerifier.length})`, 'success');
+                
+                // Test code challenge generation
+                const codeChallenge = await generateCodeChallenge(codeVerifier);
+                logToPhase('phase1', `✅ Code challenge generated: ${codeChallenge.substring(0, 10)}...`, 'success');
+                
+                logToPhase('phase1', '🎉 All crypto utilities working correctly!', 'success');
+                updatePhaseStatus('phase1', 'success');
+                
+            } catch (error) {
+                logToPhase('phase1', `❌ Crypto utilities test failed: ${error.message}`, 'error');
+                updatePhaseStatus('phase1', 'error');
+            }
+        };
+
+        window.generatePKCEChallenge = async function() {
+            logToPhase('phase1', 'Generating PKCE challenge pair...', 'info');
+            
+            try {
+                const codeVerifier = generateCodeVerifier();
+                const codeChallenge = await generateCodeChallenge(codeVerifier);
+                const state = generateRandomString(32);
+                
+                window.debugState.codeVerifier = codeVerifier;
+                window.debugState.codeChallenge = codeChallenge;
+                window.debugState.state = state;
+                
+                logToPhase('phase1', `✅ Code Verifier: ${codeVerifier}`, 'success');
+                logToPhase('phase1', `✅ Code Challenge: ${codeChallenge}`, 'success');
+                logToPhase('phase1', `✅ State: ${state}`, 'success');
+                
+                // Enable next phase
+                document.getElementById('phase2').style.opacity = '1';
+                
+            } catch (error) {
+                logToPhase('phase1', `❌ PKCE challenge generation failed: ${error.message}`, 'error');
+                updatePhaseStatus('phase1', 'error');
+            }
+        };
+
+        window.testEnvironmentConfig = async function() {
+            logToPhase('phase1', 'Testing environment configuration...', 'info');
+            
+            try {
+                const validationResult = await validateEnvironmentConfig();
+                if (validationResult.isValid) {
+                    logToPhase('phase1', '✅ Environment configuration is valid', 'success');
+                    logToPhase('phase1', `✅ CLIENT_ID: ${validationResult.config.clientId}`, 'info');
+                    logToPhase('phase1', `✅ REDIRECT_URI: ${validationResult.config.redirectUri}`, 'info');
+                } else {
+                    logToPhase('phase1', '⚠️ Environment configuration has warnings:', 'warning');
+                    validationResult.warnings.forEach(warning => {
+                        logToPhase('phase1', `⚠️ ${warning}`, 'warning');
+                    });
+                }
+            } catch (error) {
+                logToPhase('phase1', `❌ Environment validation failed: ${error.message}`, 'error');
+                updatePhaseStatus('phase1', 'error');
+            }
+        };
+
+        // Phase 2: Authorization URL Generation
+        window.buildAuthorizationURL = async function() {
+            updatePhaseStatus('phase2', 'active');
+            logToPhase('phase2', 'Building authorization URL...', 'info');
+            
+            try {
+                if (!window.debugState.codeChallenge) {
+                    logToPhase('phase2', '⚠️ No PKCE challenge found. Generating new one...', 'warning');
+                    await generatePKCEChallenge();
+                }
+                
+                if (!window.debugState.authConfig) {
+                    logToPhase('phase2', '⚠️ No configuration found. Loading...', 'warning');
+                    await loadConfiguration();
+                }
+                
+                const config = window.debugState.authConfig;
+                const authUrl = new URL(`${config.authority}/oauth2/v2.0/authorize`);
+                
+                authUrl.searchParams.set('client_id', config.clientId);
+                authUrl.searchParams.set('response_type', 'code');
+                authUrl.searchParams.set('redirect_uri', config.redirectUri);
+                authUrl.searchParams.set('response_mode', 'query');
+                authUrl.searchParams.set('scope', config.scopes.join(' '));
+                authUrl.searchParams.set('state', window.debugState.state);
+                authUrl.searchParams.set('code_challenge', window.debugState.codeChallenge);
+                authUrl.searchParams.set('code_challenge_method', 'S256');
+                
+                const authUrlString = authUrl.toString();
+                
+                logToPhase('phase2', '✅ Authorization URL generated successfully!', 'success');
+                logToPhase('phase2', `URL Length: ${authUrlString.length} characters`, 'info');
+                
+                // Display the URL
+                const urlDisplay = document.getElementById('auth-url-display');
+                urlDisplay.style.display = 'block';
+                urlDisplay.innerHTML = `<strong>Authorization URL:</strong><br>${authUrlString}`;
+                
+                // Enable test button
+                document.getElementById('test-auth-url-btn').disabled = false;
+                window.debugState.authorizationUrl = authUrlString;
+                
+                updatePhaseStatus('phase2', 'success');
+                
+            } catch (error) {
+                logToPhase('phase2', `❌ Failed to build authorization URL: ${error.message}`, 'error');
+                updatePhaseStatus('phase2', 'error');
+            }
+        };
+
+        window.testAuthorizationURL = function() {
+            if (window.debugState.authorizationUrl) {
+                logToPhase('phase2', '🌐 Opening authorization URL in new tab...', 'info');
+                logToPhase('phase2', '📝 After authorization, copy the callback URL and paste it in Phase 3', 'info');
+                window.open(window.debugState.authorizationUrl, '_blank');
+            }
+        };
+
+        // Phase 3: Authorization Code Simulation
+        window.simulateAuthorizationCode = function() {
+            updatePhaseStatus('phase3', 'active');
+            logToPhase('phase3', 'Simulating authorization code for testing...', 'info');
+            
+            // Generate a simulated authorization code
+            const simulatedCode = 'simulated_' + generateRandomString(32);
+            window.debugState.authorizationCode = simulatedCode;
+            
+            logToPhase('phase3', `✅ Simulated authorization code: ${simulatedCode}`, 'success');
+            logToPhase('phase3', '📝 This is for testing the token exchange flow', 'info');
+            
+            // Enable token exchange
+            document.getElementById('exchange-tokens-btn').disabled = false;
+            document.getElementById('backend-exchange-btn').disabled = false;
+            
+            updatePhaseStatus('phase3', 'success');
+        };
+
+        window.parseCallbackURL = function() {
+            const callbackUrl = document.getElementById('callback-url-input').value.trim();
+            if (!callbackUrl) {
+                logToPhase('phase3', '❌ Please enter a callback URL', 'error');
+                return;
+            }
+            
+            updatePhaseStatus('phase3', 'active');
+            logToPhase('phase3', `Parsing callback URL: ${callbackUrl}`, 'info');
+            
+            try {
+                const url = new URL(callbackUrl);
+                const params = url.searchParams;
+                
+                const code = params.get('code');
+                const state = params.get('state');
+                const error = params.get('error');
+                const errorDescription = params.get('error_description');
+                
+                if (error) {
+                    logToPhase('phase3', `❌ Authorization error: ${error}`, 'error');
+                    logToPhase('phase3', `❌ Error description: ${errorDescription}`, 'error');
+                    updatePhaseStatus('phase3', 'error');
+                    return;
+                }
+                
+                if (!code) {
+                    logToPhase('phase3', '❌ No authorization code found in URL', 'error');
+                    updatePhaseStatus('phase3', 'error');
+                    return;
+                }
+                
+                if (state !== window.debugState.state) {
+                    logToPhase('phase3', '❌ State mismatch - possible CSRF attack!', 'error');
+                    logToPhase('phase3', `Expected: ${window.debugState.state}`, 'error');
+                    logToPhase('phase3', `Received: ${state}`, 'error');
+                    updatePhaseStatus('phase3', 'error');
+                    return;
+                }
+                
+                window.debugState.authorizationCode = code;
+                
+                logToPhase('phase3', `✅ Authorization code extracted: ${code.substring(0, 10)}...`, 'success');
+                logToPhase('phase3', `✅ State validation passed: ${state}`, 'success');
+                
+                // Enable token exchange
+                document.getElementById('exchange-tokens-btn').disabled = false;
+                document.getElementById('backend-exchange-btn').disabled = false;
+                
+                updatePhaseStatus('phase3', 'success');
+                
+            } catch (error) {
+                logToPhase('phase3', `❌ Failed to parse callback URL: ${error.message}`, 'error');
+                updatePhaseStatus('phase3', 'error');
+            }
+        };
+
+        // Phase 4: Token Exchange
+        window.exchangeCodeForTokens = async function() {
+            updatePhaseStatus('phase4', 'active');
+            logToPhase('phase4', 'Attempting PKCE token exchange...', 'info');
+            
+            if (!window.debugState.authorizationCode) {
+                logToPhase('phase4', '❌ No authorization code available', 'error');
+                return;
+            }
+            
+            try {
+                // Initialize PKCE authenticator if not already done
+                if (!window.debugState.pkceAuthenticator) {
+                    window.debugState.pkceAuthenticator = new PKCEAuthenticator();
+                }
+                
+                const tokenData = {
+                    grant_type: 'authorization_code',
+                    client_id: window.debugState.authConfig.clientId,
+                    code: window.debugState.authorizationCode,
+                    redirect_uri: window.debugState.authConfig.redirectUri,
+                    code_verifier: window.debugState.codeVerifier
+                };
+                
+                logToPhase('phase4', 'Sending token exchange request...', 'info');
+                
+                const response = await fetch(`${window.debugState.authConfig.authority}/oauth2/v2.0/token`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams(tokenData)
+                });
+                
+                const responseText = await response.text();
+                logToPhase('phase4', `Response status: ${response.status}`, 'info');
+                
+                if (response.ok) {
+                    const tokens = JSON.parse(responseText);
+                    window.debugState.accessToken = tokens.access_token;
+                    window.debugState.refreshToken = tokens.refresh_token;
+                    
+                    logToPhase('phase4', '✅ Token exchange successful!', 'success');
+                    logToPhase('phase4', `✅ Access token received (${tokens.access_token.length} chars)`, 'success');
+                    
+                    if (tokens.refresh_token) {
+                        logToPhase('phase4', `✅ Refresh token received`, 'success');
+                    }
+                    
+                    // Display token info
+                    const tokenDisplay = document.getElementById('token-display');
+                    tokenDisplay.style.display = 'block';
+                    tokenDisplay.innerHTML = `
+                        <strong>Access Token:</strong><br>
+                        ${tokens.access_token.substring(0, 100)}...<br><br>
+                        <strong>Token Type:</strong> ${tokens.token_type}<br>
+                        <strong>Expires In:</strong> ${tokens.expires_in} seconds<br>
+                        <strong>Scope:</strong> ${tokens.scope}
+                    `;
+                    
+                    // Enable Graph API testing
+                    document.getElementById('test-user-btn').disabled = false;
+                    document.getElementById('test-notebooks-btn').disabled = false;
+                    document.getElementById('validate-token-btn').disabled = false;
+                    
+                    updatePhaseStatus('phase4', 'success');
+                    
+                } else {
+                    const errorData = JSON.parse(responseText);
+                    logToPhase('phase4', `❌ Token exchange failed: ${errorData.error}`, 'error');
+                    logToPhase('phase4', `❌ Error description: ${errorData.error_description}`, 'error');
+                    updatePhaseStatus('phase4', 'error');
+                }
+                
+            } catch (error) {
+                logToPhase('phase4', `❌ Token exchange error: ${error.message}`, 'error');
+                updatePhaseStatus('phase4', 'error');
+            }
+        };
+
+        window.testBackendExchange = async function() {
+            logToPhase('phase4', 'Testing backend token exchange...', 'info');
+            
+            try {
+                const backendUrl = 'https://localhost:3001'; // From your .env
+                const response = await fetch(`${backendUrl}/api/auth/token`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        code: window.debugState.authorizationCode,
+                        codeVerifier: window.debugState.codeVerifier,
+                        redirectUri: window.debugState.authConfig.redirectUri
+                    })
+                });
+                
+                if (response.ok) {
+                    const tokens = await response.json();
+                    logToPhase('phase4', '✅ Backend token exchange successful!', 'success');
+                    window.debugState.accessToken = tokens.access_token;
+                } else {
+                    logToPhase('phase4', `⚠️ Backend service not available (${response.status})`, 'warning');
+                    logToPhase('phase4', 'This is expected if backend is not running', 'info');
+                }
+                
+            } catch (error) {
+                logToPhase('phase4', `⚠️ Backend service not available: ${error.message}`, 'warning');
+                logToPhase('phase4', 'This is expected if backend service is not running', 'info');
+            }
+        };
+
+        // Phase 5: Graph API Testing
+        window.testGraphAPIUser = async function() {
+            updatePhaseStatus('phase5', 'active');
+            logToPhase('phase5', 'Testing Graph API - User Profile...', 'info');
+            
+            if (!window.debugState.accessToken) {
+                logToPhase('phase5', '❌ No access token available', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('https://graph.microsoft.com/v1.0/me', {
+                    headers: {
+                        'Authorization': `Bearer ${window.debugState.accessToken}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const user = await response.json();
+                    logToPhase('phase5', '✅ User profile retrieved successfully!', 'success');
+                    logToPhase('phase5', `✅ User: ${user.displayName} (${user.userPrincipalName})`, 'success');
+                    updatePhaseStatus('phase5', 'success');
+                } else {
+                    logToPhase('phase5', `❌ Graph API call failed: ${response.status} ${response.statusText}`, 'error');
+                    updatePhaseStatus('phase5', 'error');
+                }
+                
+            } catch (error) {
+                logToPhase('phase5', `❌ Graph API error: ${error.message}`, 'error');
+                updatePhaseStatus('phase5', 'error');
+            }
+        };
+
+        window.testGraphAPINotebooks = async function() {
+            logToPhase('phase5', 'Testing Graph API - OneNote Notebooks...', 'info');
+            
+            if (!window.debugState.accessToken) {
+                logToPhase('phase5', '❌ No access token available', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('https://graph.microsoft.com/v1.0/me/onenote/notebooks', {
+                    headers: {
+                        'Authorization': `Bearer ${window.debugState.accessToken}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    logToPhase('phase5', `✅ OneNote notebooks retrieved: ${data.value.length} notebooks found`, 'success');
+                    
+                    data.value.forEach((notebook, index) => {
+                        logToPhase('phase5', `📚 ${index + 1}. ${notebook.displayName} (ID: ${notebook.id.substring(0, 10)}...)`, 'info');
+                    });
+                    
+                } else {
+                    logToPhase('phase5', `❌ OneNote API call failed: ${response.status} ${response.statusText}`, 'error');
+                    const errorText = await response.text();
+                    logToPhase('phase5', `❌ Error details: ${errorText}`, 'error');
+                }
+                
+            } catch (error) {
+                logToPhase('phase5', `❌ OneNote API error: ${error.message}`, 'error');
+            }
+        };
+
+        window.validateToken = function() {
+            logToPhase('phase5', 'Validating access token...', 'info');
+            
+            if (!window.debugState.accessToken) {
+                logToPhase('phase5', '❌ No access token to validate', 'error');
+                return;
+            }
+            
+            try {
+                // Basic JWT parsing (header and payload only, not verifying signature)
+                const tokenParts = window.debugState.accessToken.split('.');
+                if (tokenParts.length !== 3) {
+                    logToPhase('phase5', '❌ Invalid JWT token format', 'error');
+                    return;
+                }
+                
+                const header = JSON.parse(atob(tokenParts[0]));
+                const payload = JSON.parse(atob(tokenParts[1]));
+                
+                logToPhase('phase5', '✅ Token structure is valid JWT', 'success');
+                logToPhase('phase5', `✅ Algorithm: ${header.alg}`, 'info');
+                logToPhase('phase5', `✅ Audience: ${payload.aud}`, 'info');
+                logToPhase('phase5', `✅ Issuer: ${payload.iss}`, 'info');
+                logToPhase('phase5', `✅ Expires: ${new Date(payload.exp * 1000).toLocaleString()}`, 'info');
+                logToPhase('phase5', `✅ Scopes: ${payload.scp}`, 'info');
+                
+            } catch (error) {
+                logToPhase('phase5', `❌ Token validation error: ${error.message}`, 'error');
+            }
+        };
+
+        // Utility functions
+        window.clearDebugConsole = function() {
+            document.getElementById('debug-console').innerHTML = '';
+        };
+
+        window.exportDebugLog = function() {
+            const debugContent = document.getElementById('debug-console').innerText;
+            const blob = new Blob([debugContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `pkce-debug-log-${new Date().toISOString().replace(/:/g, '-')}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        };
+
+        window.resetAllPhases = function() {
+            // Reset all phase statuses
+            ['phase1', 'phase2', 'phase3', 'phase4', 'phase5'].forEach(phaseId => {
+                updatePhaseStatus(phaseId, 'pending');
+                document.getElementById(`${phaseId}-output`).innerHTML = '';
+            });
+            
+            // Reset debug state
+            window.debugState = {
+                codeVerifier: null,
+                codeChallenge: null,
+                state: null,
+                authorizationCode: null,
+                accessToken: null,
+                refreshToken: null,
+                authConfig: null,
+                pkceAuthenticator: null
+            };
+            
+            // Reset UI elements
+            document.getElementById('auth-url-display').style.display = 'none';
+            document.getElementById('token-display').style.display = 'none';
+            document.getElementById('callback-url-input').value = '';
+            
+            // Disable buttons
+            document.getElementById('test-auth-url-btn').disabled = true;
+            document.getElementById('exchange-tokens-btn').disabled = true;
+            document.getElementById('backend-exchange-btn').disabled = true;
+            document.getElementById('test-user-btn').disabled = true;
+            document.getElementById('test-notebooks-btn').disabled = true;
+            document.getElementById('validate-token-btn').disabled = true;
+            
+            clearDebugConsole();
+            logToPhase('debug', '🔄 All phases reset - ready for new debugging session', 'info');
+        };
+
+        // Initialize when page loads
+        window.addEventListener('load', function() {
+            loadConfiguration();
+            logToPhase('debug', '🚀 PKCE Authentication Debugger loaded and ready!', 'success');
+        });
+
+    </script>
+</body>
+</html>

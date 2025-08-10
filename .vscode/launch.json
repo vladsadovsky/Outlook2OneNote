@@ -18,7 +18,6 @@
       "request": "launch",
       "name": "Launch Edge against localhost (Office Add-in)",
       "url": "https://localhost:3000/taskpane.html",
-      "port": 9222,
       "webRoot": "${workspaceFolder}",
       "sourceMaps": true,
       "trace": true

@@ -52,7 +52,7 @@ Office.onReady((info) => {
     document.getElementById("app-body").style.display = "flex";
     
     // Only show dumpthread button in development mode
-    if (__DEV__) {
+    if (typeof __DEV__ !== 'undefined' && __DEV__) {
       document.getElementById("dumpthread").onclick = window.dumpThread;
     } else {
       // Hide dumpthread button in production
@@ -81,8 +81,15 @@ export async function chooseNotebook() {
   const insertAt = document.getElementById("item-subject");
 
   try {
+    // Show loading state
+    insertAt.innerHTML = "";
+    insertAt.appendChild(document.createTextNode("🔐 Starting secure authentication..."));
+    
     const notebooks = await getOneNoteNotebooks();  
     if (notebooks && notebooks.length > 0) {
+      insertAt.innerHTML = "";
+      insertAt.appendChild(document.createTextNode(`Found ${notebooks.length} OneNote notebooks. Select one from the popup.`));
+      
       showNotebookPopup(notebooks, (notebook) => {
         // Store the selected notebook globally
         setSelectedNotebook(notebook);
@@ -93,18 +100,18 @@ export async function chooseNotebook() {
         
         // Update UI to show selected notebook
         insertAt.innerHTML = "";
-        insertAt.appendChild(document.createTextNode(`Selected Notebook: ${notebook.displayName || notebook.name || 'Unknown'}`));
+        insertAt.appendChild(document.createTextNode(`✅ Selected Notebook: ${notebook.displayName || notebook.name || 'Unknown'}`));
         insertAt.appendChild(document.createElement("br"));
         insertAt.appendChild(document.createTextNode("You can now use 'Export Thread' to export emails to this notebook."));
       });
     } else {
       insertAt.innerHTML = "";
-      insertAt.appendChild(document.createTextNode("No notebooks found."));
+      insertAt.appendChild(document.createTextNode("📭 No notebooks found or authentication cancelled."));
     } 
   } catch (error) {
     console.error("Error in chooseNotebook:", error);
     insertAt.innerHTML = "";
-    insertAt.appendChild(document.createTextNode("Error retrieving notebooks: " + error.message));
+    insertAt.appendChild(document.createTextNode("❌ Error retrieving notebooks: " + error.message));
   }
 }
 

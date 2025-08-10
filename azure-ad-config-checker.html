@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Azure AD Configuration Checker - Outlook2OneNote</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #0078d4;
+            border-bottom: 2px solid #0078d4;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #333;
+            margin-top: 30px;
+        }
+        .config-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+            border-left: 4px solid #0078d4;
+        }
+        .config-section.error {
+            border-left-color: #dc3545;
+            background: #fff5f5;
+        }
+        .config-section.success {
+            border-left-color: #28a745;
+            background: #f0fff4;
+        }
+        .test-button {
+            background: #0078d4;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 10px 5px 10px 0;
+            transition: background 0.2s;
+        }
+        .test-button:hover {
+            background: #106ebe;
+        }
+        .test-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .code-block {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .status.loading {
+            background: #e3f2fd;
+            border: 1px solid #2196f3;
+            color: #1976d2;
+        }
+        .status.success {
+            background: #e8f5e8;
+            border: 1px solid #4caf50;
+            color: #388e3c;
+        }
+        .status.error {
+            background: #ffebee;
+            border: 1px solid #f44336;
+            color: #d32f2f;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Azure AD Configuration Checker</h1>
+        
+        <div class="config-section">
+            <h2>Required Azure AD Configuration</h2>
+            <p><strong>Application Type:</strong> Single-page application (SPA)</p>
+            <p><strong>Client ID:</strong> <code>a73f5240-e06c-43a3-8328-1fbd80766263</code></p>
+            <p><strong>Authority:</strong> <code>https://login.microsoftonline.com/consumers</code></p>
+            <p><strong>Supported Accounts:</strong> Personal Microsoft accounts only</p>
+            
+            <h3>Required Redirect URIs (SPA Platform):</h3>
+            <div class="code-block">https://localhost:3000/src/auth/msal-callback.html</div>
+            
+            <h3>Required API Permissions:</h3>
+            <ul>
+                <li>Microsoft Graph → Mail.Read → Delegated</li>
+                <li>Microsoft Graph → Notes.ReadWrite → Delegated</li>
+                <li>Microsoft Graph → User.Read → Delegated</li>
+            </ul>
+        </div>
+
+        <div class="config-section">
+            <h2>🧪 Authentication Tests</h2>
+            <p>Click the buttons below to test different authentication methods:</p>
+            
+            <button class="test-button" onclick="testOfficeSSO()">Test Office SSO</button>
+            <button class="test-button" onclick="testMSALPopup()">Test MSAL Popup</button>
+            <button class="test-button" onclick="testGraphAPI()">Test Graph API</button>
+            <button class="test-button" onclick="clearCache()">Clear MSAL Cache</button>
+            
+            <div id="test-results"></div>
+        </div>
+
+        <div class="config-section">
+            <h2>📋 Current Configuration Details</h2>
+            <div id="config-details" class="code-block">
+                Loading configuration details...
+            </div>
+        </div>
+
+        <div class="config-section">
+            <h2>🔍 Troubleshooting Tips</h2>
+            <ul>
+                <li><strong>Invalid redirect_uri error:</strong> Make sure the Azure AD app has the exact redirect URI configured as SPA platform</li>
+                <li><strong>AADSTS50011 error:</strong> Reply URL mismatch - check that redirect URI is exactly <code>https://localhost:3000/src/auth/msal-callback.html</code></li>
+                <li><strong>Popup blocked:</strong> Allow popups for localhost:3000 in your browser</li>
+                <li><strong>Network errors:</strong> Check that webpack dev server is running on port 3000</li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
+    <script type="module">
+        // Import our auth service for testing
+        import { authService } from '../common/auth-service.js';
+        
+        // Display current configuration
+        function displayConfigDetails() {
+            const configDetails = {
+                currentUrl: window.location.href,
+                userAgent: navigator.userAgent,
+                timestamp: new Date().toISOString(),
+                msalVersion: msal.version || 'Unknown',
+                redirectUri: 'https://localhost:3000/src/auth/msal-callback.html',
+                clientId: 'a73f5240-e06c-43a3-8328-1fbd80766263',
+                authority: 'https://login.microsoftonline.com/consumers',
+                requiredScopes: ['User.Read', 'Mail.Read', 'Notes.ReadWrite']
+            };
+            
+            document.getElementById('config-details').textContent = JSON.stringify(configDetails, null, 2);
+        }
+        
+        function showTestResult(message, type = 'loading') {
+            const resultsDiv = document.getElementById('test-results');
+            const statusDiv = document.createElement('div');
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+            resultsDiv.appendChild(statusDiv);
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+        
+        // Test Office SSO
+        window.testOfficeSSO = async function() {
+            showTestResult('🔄 Testing Office SSO...', 'loading');
+            try {
+                // Check if Office.js is available
+                if (typeof Office === 'undefined') {
+                    throw new Error('Office.js not available - this test only works in Office Add-in context');
+                }
+                
+                const token = await authService.authenticateWithOfficeSSO();
+                showTestResult('✅ Office SSO successful! Token received.', 'success');
+                showTestResult(`Token preview: ${token.substring(0, 50)}...`, 'success');
+                
+            } catch (error) {
+                showTestResult(`❌ Office SSO failed: ${error.message}`, 'error');
+                console.error('Office SSO test error:', error);
+            }
+        };
+        
+        // Test MSAL Popup
+        window.testMSALPopup = async function() {
+            showTestResult('🔄 Testing MSAL popup authentication...', 'loading');
+            try {
+                const token = await authService.authenticateWithMsal();
+                showTestResult('✅ MSAL popup successful! Token received.', 'success');
+                showTestResult(`Token preview: ${token.substring(0, 50)}...`, 'success');
+                
+            } catch (error) {
+                showTestResult(`❌ MSAL popup failed: ${error.message}`, 'error');
+                console.error('MSAL popup test error:', error);
+                
+                // Provide specific guidance based on error
+                if (error.message.includes('redirect_uri')) {
+                    showTestResult('💡 Fix: Check that Azure AD app has the redirect URI configured as SPA platform', 'error');
+                } else if (error.message.includes('popup_window_error')) {
+                    showTestResult('💡 Fix: Enable popups for localhost:3000 in your browser', 'error');
+                }
+            }
+        };
+        
+        // Test Graph API
+        window.testGraphAPI = async function() {
+            showTestResult('🔄 Testing Graph API access...', 'loading');
+            try {
+                const response = await authService.callGraphApi('/me');
+                showTestResult('✅ Graph API call successful!', 'success');
+                showTestResult(`User: ${response.displayName} (${response.userPrincipalName})`, 'success');
+                
+            } catch (error) {
+                showTestResult(`❌ Graph API failed: ${error.message}`, 'error');
+                console.error('Graph API test error:', error);
+            }
+        };
+        
+        // Clear MSAL cache
+        window.clearCache = function() {
+            try {
+                sessionStorage.clear();
+                localStorage.clear();
+                showTestResult('✅ MSAL cache cleared successfully', 'success');
+                showTestResult('💡 You may need to authenticate again', 'loading');
+            } catch (error) {
+                showTestResult(`❌ Error clearing cache: ${error.message}`, 'error');
+            }
+        };
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            displayConfigDetails();
+        });
+    </script>
+</body>
+</html>
