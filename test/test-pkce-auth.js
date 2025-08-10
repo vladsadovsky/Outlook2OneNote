@@ -19,9 +19,9 @@
 
 // Import modules to test
 import { generateCodeVerifier, generateCodeChallenge, generateState, validateCodeVerifier, checkCryptoSupport } from '../common/crypto-utils.js';
-import { PKCEAuthenticator, pkceAuth } from '../common/pkce-auth.js';
-import { getConfig, validateConfig } from '../common/auth-config.js';
-import { authenticateAndGetNotebooks, checkPlatformSupport } from '../common/graphapi-auth.js';
+import { PKCEAuthenticator, pkceAuth } from '../src/auth/pkce-auth.js';
+import { getConfig, validateConfig } from '../src/auth/auth-config.js';
+import { authenticateAndGetNotebooks, checkPlatformSupport } from '../src/auth/graphapi-auth.js';
 
 // Test results
 const testResults = {

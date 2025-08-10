@@ -29,7 +29,7 @@ import {
   clearSelectedNotebook 
 } from '../common/app-state.js';
 
-import authService from '../common/auth-service.js';
+import authService from '../auth/auth-service.js';
 
 // Function to get OneNote notebooks using Office SSO-first authentication
 export async function getOneNoteNotebooks() {

@@ -8,7 +8,7 @@
 
 import { getOneNoteNotebooks, showNotebookPopup, onNotebookSelected, exportThread } from './onenote-service.js';
 import { getSelectedNotebook, setSelectedNotebook, clearSelectedNotebook } from '../common/app-state.js';
-import { pkceAuth } from '../common/pkce-auth.js';
+import { pkceAuth } from '../auth/pkce-auth.js';
 
 /**
  * Choose OneNote notebook using PKCE authentication

@@ -24,7 +24,7 @@
  * - Office SSO + MSAL Authentication Service
  */
 
-import authService from '../common/auth-service.js';
+import authService from '../auth/auth-service.js';
 
 // Main function to dump thread information (development only)
 export async function dumpThread() {
