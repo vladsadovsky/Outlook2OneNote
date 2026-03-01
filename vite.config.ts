@@ -8,9 +8,15 @@ const __dirname = fileURLToPath(new URL('.', import.meta.url))
 
 export default defineConfig(async () => {
   const httpsOptions = await devCerts.getHttpsServerOptions()
+  
+  // Use process.cwd() to work with junction points, force consistent path resolution
+  const rootDir = process.cwd().replace(/\\/g, '/')
 
   return {
     plugins: [react()],
+    
+    // Explicitly set root to current working directory
+    root: rootDir,
 
     server: {
       port: 3000,
@@ -19,15 +25,17 @@ export default defineConfig(async () => {
 
     resolve: {
       alias: {
-        '@': resolve(__dirname, 'src'),
+        '@': resolve(rootDir, 'src'),
       },
+      // Preserve symlinks to maintain consistent paths
+      preserveSymlinks: true,
     },
 
     build: {
       rollupOptions: {
         input: {
-          taskpane: resolve(__dirname, 'src/taskpane/taskpane.html'),
-          commands: resolve(__dirname, 'src/commands/commands.html'),
+          taskpane: resolve(rootDir, 'src/taskpane/taskpane.html'),
+          commands: resolve(rootDir, 'src/commands/commands.html'),
           // auth/callback.html is served as a static file from public/ — no bundling needed
         },
       },
@@ -41,7 +49,7 @@ export default defineConfig(async () => {
     test: {
       globals: true,
       environment: 'jsdom',
-      setupFiles: ['./tests/setup.ts'],
+      setupFiles: [resolve(rootDir, 'tests/setup.ts')],
       coverage: {
         reporter: ['text', 'html'],
         include: ['src/**'],

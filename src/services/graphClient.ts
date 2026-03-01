@@ -50,8 +50,21 @@ async function graphRequest(url: string, init: RequestInit): Promise<Response> {
 
   if (!res.ok) {
     const body = await res.text().catch(() => '')
-    debugError('graphClient', `HTTP ${res.status}`, body)
-    throw new Error(`Graph API error ${res.status}: ${res.statusText}`)
+    debugError('graphClient', `HTTP ${res.status} ${res.statusText}`, 'URL:', url)
+    debugError('graphClient', 'Response body:', body)
+    
+    // Try to parse error details if JSON
+    let errorDetails = body
+    try {
+      const parsed = JSON.parse(body)
+      if (parsed.error) {
+        errorDetails = `${parsed.error.code}: ${parsed.error.message}`
+      }
+    } catch {
+      // Not JSON, use raw body
+    }
+    
+    throw new Error(`Graph API error ${res.status}: ${errorDetails}`)
   }
 
   return res
