@@ -1,0 +1,82 @@
+import { getGraphToken, clearCachedToken } from '@/auth/authService'
+import { debugLog, debugError } from '@/utils/logger'
+
+const GRAPH_BASE = 'https://graph.microsoft.com/v1.0'
+
+export interface GraphClient {
+  get<T>(path: string, params?: Record<string, string>): Promise<T>
+  post<T>(path: string, body: unknown, contentType?: string): Promise<T>
+}
+
+// Internal: makes one fetch attempt with a given token.
+// Returns the Response or throws on network error.
+async function attempt(url: string, init: RequestInit, token: string): Promise<Response> {
+  return fetch(url, {
+    ...init,
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      ...(init.headers as Record<string, string> | undefined),
+    },
+  })
+}
+
+// Resolves an absolute or relative Graph path to a full URL with optional query params.
+function resolveUrl(path: string, params?: Record<string, string>): string {
+  const base = path.startsWith('http') ? path : `${GRAPH_BASE}${path}`
+  if (!params) return base
+  return `${base}?${new URLSearchParams(params)}`
+}
+
+// Core request helper: attaches Bearer token, retries once on 401, respects 429 Retry-After.
+async function graphRequest(url: string, init: RequestInit): Promise<Response> {
+  let token = await getGraphToken()
+  let res = await attempt(url, init, token)
+
+  // 401 — token may have expired between cache check and use; refresh once
+  if (res.status === 401) {
+    debugLog('graphClient', '401 — refreshing token and retrying')
+    clearCachedToken()
+    token = await getGraphToken()
+    res = await attempt(url, init, token)
+  }
+
+  // 429 — rate limited; honour Retry-After header, retry once
+  if (res.status === 429) {
+    const retryAfterSec = Number(res.headers.get('Retry-After') ?? '5')
+    debugLog('graphClient', `429 — waiting ${retryAfterSec}s`)
+    await new Promise(resolve => setTimeout(resolve, retryAfterSec * 1000))
+    res = await attempt(url, init, token)
+  }
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => '')
+    debugError('graphClient', `HTTP ${res.status}`, body)
+    throw new Error(`Graph API error ${res.status}: ${res.statusText}`)
+  }
+
+  return res
+}
+
+export function createGraphClient(): GraphClient {
+  return {
+    async get<T>(path: string, params?: Record<string, string>): Promise<T> {
+      const url = resolveUrl(path, params)
+      debugLog('graphClient', 'GET', url)
+      const res = await graphRequest(url, { method: 'GET' })
+      return res.json() as Promise<T>
+    },
+
+    async post<T>(path: string, body: unknown, contentType = 'application/json'): Promise<T> {
+      const url = resolveUrl(path)
+      debugLog('graphClient', 'POST', url)
+      const res = await graphRequest(url, {
+        method: 'POST',
+        headers: { 'Content-Type': contentType },
+        body: contentType === 'application/json'
+          ? JSON.stringify(body)
+          : body as BodyInit,
+      })
+      return res.json() as Promise<T>
+    },
+  }
+}

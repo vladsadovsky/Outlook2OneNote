@@ -1,83 +1,231 @@
-/* 
-  * See LICENSE in the project root for license information.
- */
+/* ── Reset / base ─────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
 
- html,
- body {
-     width: 100%;
-     height: 100%;
-     margin: 0;
-     padding: 0;
- }
- 
- ul {
-     margin: 0;
-     padding: 0;
- }
- 
- .ms-welcome__header {
-    padding: 20px;
-    padding-bottom: 30px;
-    padding-top: 100px;
-    display: -webkit-flex;
-    display: flex;
-    -webkit-flex-direction: column;
-    flex-direction: column;
-    align-items: center;
- }
-
- .ms-welcome__main {
-    display: -webkit-flex;
-    display: flex;
-    -webkit-flex-direction: column;
-    flex-direction: column;
-    -webkit-flex-wrap: nowrap;
-    flex-wrap: nowrap;
-    -webkit-align-items: flex-start;
-    align-items: flex-start;
-    -webkit-flex: 1 0 0;
-    flex: 1 0 0;
-    padding: 10px 20px;
- }
- 
- .ms-welcome__main > h2 {
-     width: 100%;
-     text-align: center;
- }
- 
- .ms-welcome__features {
-     list-style-type: none;
-     margin-top: 20px;
- }
- 
- .ms-welcome__features.ms-List .ms-ListItem {
-     padding-bottom: 20px;
-     display: -webkit-flex;
-     display: flex;
- }
- 
- .ms-welcome__features.ms-List .ms-ListItem > .ms-Icon {
-     margin-right: 10px;
- }
- 
- .ms-welcome__action.ms-Button--hero {
-     margin-top: 30px;
- }
- 
-.ms-Button.ms-Button--hero .ms-Button-label {
-  color: #0078d7;
+body {
+  margin: 0;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 14px;
+  color: #1f1f1f;
+  background: #fff;
 }
 
-.ms-Button.ms-Button--hero:hover .ms-Button-label,
-.ms-Button.ms-Button--hero:focus .ms-Button-label{
-  color: #005a9e;
+/* ── App shell ───────────────────────────────────────────────────────────── */
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── App header ──────────────────────────────────────────────────────────── */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #0078d4;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.app-header__title {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.app-header__settings-btn {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 3px;
+  line-height: 1;
+}
+
+.app-header__settings-btn:hover {
+  background: rgba(255,255,255,0.2);
+}
+
+/* ── Shared button styles ────────────────────────────────────────────────── */
+.btn {
+  display: inline-block;
+  padding: 7px 16px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.btn--primary {
+  background: #0078d4;
+  color: #fff;
+  border-color: #0078d4;
+}
+
+.btn--primary:hover:not(:disabled) { background: #006bb9; }
+.btn--primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn--secondary {
+  background: #fff;
+  color: #0078d4;
+  border-color: #0078d4;
+}
+
+.btn--secondary:hover { background: #f0f6fd; }
+
+/* ── Export view ─────────────────────────────────────────────────────────── */
+.export-view {
+  padding: 16px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.export-view__no-notebook { text-align: center; padding-top: 32px; }
+.export-view__no-notebook p { margin-bottom: 12px; color: #555; }
+
+.export-view__idle { display: flex; flex-direction: column; gap: 12px; }
+.export-view__notebook-name { margin: 0; color: #555; }
+.export-view__export-btn { align-self: flex-start; }
+
+.export-view__success { display: flex; flex-direction: column; gap: 12px; }
+.export-view__success-msg { color: #107c10; font-weight: 600; margin: 0; }
+
+.export-view__links { display: flex; flex-direction: column; gap: 6px; }
+.export-view__link { color: #0078d4; text-decoration: underline; }
+
+/* ── Progress bar ────────────────────────────────────────────────────────── */
+.progress-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px;
+}
+
+.progress-bar__spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #ccc;
+  border-top-color: #0078d4;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.progress-bar__message { color: #555; }
+
+/* ── Error banner ────────────────────────────────────────────────────────── */
+.error-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 16px;
+  background: #fde7e9;
+  border-left: 4px solid #c50f1f;
+  margin: 8px 16px;
+  border-radius: 2px;
+}
+
+.error-banner__message { color: #c50f1f; }
+.error-banner__retry { align-self: flex-start; }
+
+/* ── Notebook picker ─────────────────────────────────────────────────────── */
+.notebook-picker { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+.notebook-picker__label { font-weight: 600; }
+.notebook-picker__row { display: flex; gap: 6px; align-items: center; }
+
+.notebook-picker__select {
+  flex: 1;
+  padding: 5px 8px;
+  border: 1px solid #8a8886;
+  border-radius: 3px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.notebook-picker__refresh {
+  background: none;
+  border: 1px solid #8a8886;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 3px 8px;
+  line-height: 1;
+}
+
+.notebook-picker__refresh:hover { background: #f3f2f1; }
+
+/* ── Settings overlay ────────────────────────────────────────────────────── */
+.settings-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.3);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  z-index: 100;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.settings-dialog {
+  background: #fff;
+  border-radius: 4px;
+  padding: 20px;
+  width: 100%;
+  max-width: 380px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.settings-dialog__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.settings-dialog__loading { margin: 0; color: #555; }
+.settings-dialog__error { margin: 0; color: #c50f1f; }
+.settings-dialog__hint { margin: 0; font-size: 12px; color: #888; text-align: right; }
+
+.settings-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* ── Settings fields ─────────────────────────────────────────────────────── */
+.settings-field { display: flex; flex-direction: column; gap: 4px; }
+.settings-field__label { font-weight: 600; }
+
+.settings-field__input {
+  padding: 5px 8px;
+  border: 1px solid #8a8886;
+  border-radius: 3px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.settings-field__hint { font-size: 12px; color: #888; }
+
+.settings-field__radio {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: normal;
   cursor: pointer;
 }
 
-b {
-    font-weight: bold;
-}
-
-#app-body.hidden {
-    display: none;
+.settings-field__checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
 }

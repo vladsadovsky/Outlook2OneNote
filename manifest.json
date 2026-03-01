@@ -1,0 +1,125 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/teams/vDevPreview/MicrosoftTeams.schema.json",
+  "manifestVersion": "devPreview",
+  "version": "2.0.0",
+  "id": "c1f2a3b4-d5e6-7f80-9a0b-c1d2e3f40001",
+
+  "name": {
+    "short": "Export to OneNote",
+    "full": "Outlook2OneNote — Export Email Threads to OneNote"
+  },
+  "description": {
+    "short": "Export email threads to OneNote",
+    "full": "Export Outlook email conversation threads to Microsoft OneNote. One page per email, sorted chronologically, in a new section of your chosen notebook."
+  },
+
+  "icons": {
+    "outline": "assets/icon-16.png",
+    "color": "assets/icon-80.png"
+  },
+  "accentColor": "#0078D4",
+
+  "developer": {
+    "name": "Vlads",
+    "websiteUrl": "https://www.countinglight.com",
+    "privacyUrl": "https://www.countinglight.com/privacy",
+    "termsOfUseUrl": "https://www.countinglight.com/terms"
+  },
+
+  "authorization": {
+    "permissions": {
+      "resourceSpecific": [
+        {
+          "name": "MailboxItem.Read.User",
+          "type": "Delegated"
+        }
+      ]
+    }
+  },
+
+  "extensions": [
+    {
+      "requirements": {
+        "capabilities": [
+          {
+            "name": "Mailbox",
+            "minVersion": "1.10"
+          }
+        ]
+      },
+
+      "runtimes": [
+        {
+          "id": "TaskPaneRuntime",
+          "type": "general",
+          "code": {
+            "page": "https://localhost:3000/src/taskpane/taskpane.html"
+          },
+          "lifetime": "short",
+          "actions": [
+            {
+              "id": "TaskPaneRuntimeShow",
+              "type": "openPage",
+              "pinnable": false,
+              "view": "dashboard"
+            }
+          ]
+        },
+        {
+          "id": "CommandsRuntime",
+          "type": "general",
+          "code": {
+            "page": "https://localhost:3000/src/commands/commands.html"
+          },
+          "lifetime": "short",
+          "actions": [
+            {
+              "id": "action",
+              "type": "executeFunction",
+              "displayName": "action"
+            }
+          ]
+        }
+      ],
+
+      "ribbons": [
+        {
+          "contexts": ["mailRead"],
+          "tabs": [
+            {
+              "builtInTabId": "TabDefault",
+              "groups": [
+                {
+                  "id": "msgReadGroup",
+                  "label": "Outlook2OneNote",
+                  "icons": [
+                    { "size": 16, "url": "https://localhost:3000/assets/icon-16.png" },
+                    { "size": 32, "url": "https://localhost:3000/assets/icon-32.png" },
+                    { "size": 80, "url": "https://localhost:3000/assets/icon-80.png" }
+                  ],
+                  "controls": [
+                    {
+                      "id": "msgReadOpenPaneButton",
+                      "type": "button",
+                      "label": "Export to OneNote",
+                      "icons": [
+                        { "size": 16, "url": "https://localhost:3000/assets/icon-16.png" },
+                        { "size": 32, "url": "https://localhost:3000/assets/icon-32.png" },
+                        { "size": 80, "url": "https://localhost:3000/assets/icon-80.png" }
+                      ],
+                      "supertip": {
+                        "title": "Export to OneNote",
+                        "description": "Export this email thread to Microsoft OneNote"
+                      },
+                      "actionId": "TaskPaneRuntimeShow"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

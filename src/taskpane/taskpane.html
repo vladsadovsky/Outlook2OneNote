@@ -1,50 +1,13 @@
-
-<!-- This file contains definition of the task pane for the Outlook2OneNote Office Add in -->
-
 <!DOCTYPE html>
-
 <html lang="en">
-
-<head>
+  <head>
     <meta charset="UTF-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Outlook2Onenote Task Pane</title>
-
-    <!-- Office JavaScript API -->
-    <script type="text/javascript" src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
-
-    <!-- For more information on Fluent UI, visit https://developer.microsoft.com/fluentui#/. -->
-    <link rel="stylesheet" href="https://res-1.cdn.office.net/files/fabric-cdn-prod_20230815.002/office-ui-fabric-core/11.1.0/css/fabric.min.css"/>
-
-    <!-- Template styles -->
-    <link href="taskpane.css" rel="stylesheet" type="text/css" />
-    
-    <!-- Task pane functionality -->
-    <script type="module" src="taskpane.js"></script>
-</head>
-
-<body class="ms-font-m ms-welcome ms-Fabric">
-    <header class="ms-welcome__header ms-bgColor-neutralLighter">
-        <img width="90" height="90" src="../../assets/notes_icon_128x128.png" alt="CountingLight" title="CountingLight" />
-        <h1 class="ms-font-su">Export to OneNote</h1>
-    </header>
-    <section id="sideload-msg" class="ms-welcome__main">
-        <h2 class="ms-font-xl">Please <a target="_blank" rel="noopener noreferrer" href="https://learn.microsoft.com/office/dev/add-ins/testing/test-debug-office-add-ins#sideload-an-office-add-in-for-testing">sideload</a> your add-in to see app body.</h2>
-    </section>
-    <main id="app-body" class="ms-welcome__main hidden">
-        <div role="button" id="dumpthread" class="ms-welcome__action ms-Button ms-Button--hero ms-font-xl">
-            <span class="ms-Button-label">DumpThread</span>
-        </div>
-        <div role="button" id="choose" class="ms-welcome__action ms-Button ms-Button--hero ms-font-xl">
-            <span class="ms-Button-label">ChooseNotebook</span>
-        </div>
-        <div role="button" id="export" class="ms-welcome__action ms-Button ms-Button--hero ms-font-xl">
-            <span class="ms-Button-label">ExportThread</span>
-        </div>
-
-        <p><label id="item-subject"></label></p>
-    </main>
-</body>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Export to OneNote</title>
+    <script type="text/javascript" src="https://appsforoffice.microsoft.com/lib/1.1/hosted/office.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./taskpane.ts"></script>
+  </body>
 </html>
