@@ -12,7 +12,7 @@
   <ProviderName>Vlads</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
 
-  <DisplayName DefaultValue="Export to OneNote"/>
+  <DisplayName DefaultValue="Export Thread to OneNote"/>
   <Description DefaultValue="Export Outlook email conversation threads to Microsoft OneNote."/>
 
   <IconUrl DefaultValue="https://localhost:3000/assets/icon-80.png"/>
@@ -108,10 +108,10 @@
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="GroupLabel" DefaultValue="Outlook2OneNote"/>
-        <bt:String id="TaskpaneButton.Label" DefaultValue="Export to OneNote"/>
+        <bt:String id="TaskpaneButton.Label" DefaultValue="Export Thread to OneNote"/>
       </bt:ShortStrings>
       <bt:LongStrings>
-        <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Export this email thread to Microsoft OneNote"/>
+        <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Export the entire email thread to OneNote (one page per message)"/>
       </bt:LongStrings>
     </Resources>
 

@@ -100,7 +100,7 @@ export default function ExportView({
             className="btn btn--primary export-view__export-btn"
             onClick={() => void handleExport()}
           >
-            Export to OneNote
+            Export Full Thread
           </button>
         </div>
       )}
@@ -116,8 +116,13 @@ export default function ExportView({
       {status === 'success' && (
         <div className="export-view__success">
           <p className="export-view__success-msg">
-            ✓ Exported {exportedPages.length} message{exportedPages.length !== 1 ? 's' : ''} to OneNote.
+            ✓ Exported {exportedPages.length} message{exportedPages.length !== 1 ? 's' : ''} from this thread to OneNote.
           </p>
+          {(settings.preferredLink === 'web' || settings.preferredLink === 'both') && exportedPages.length > 0 && (
+            <p className="export-view__success-note">
+              For immediate visibility, open the OneNote Web link below. Desktop sync can take a moment.
+            </p>
+          )}
           <div className="export-view__links">
             {exportedPages.length > 0 && (settings.preferredLink === 'web' || settings.preferredLink === 'both') && (
               <a

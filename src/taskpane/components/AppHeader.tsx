@@ -13,7 +13,7 @@ export default function AppHeader({ onSettingsClick }: AppHeaderProps): React.Re
 
   return (
     <header className="app-header">
-      <span className="app-header__title">Export to OneNote</span>
+      <span className="app-header__title">Export Thread to OneNote</span>
       <button
         type="button"
         className="app-header__settings-btn"

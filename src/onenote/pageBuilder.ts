@@ -38,15 +38,19 @@ function buildMetadataTable(message: EmailMessage): string {
   ]
   const rowsHtml = rows
     .map(([label, value]) =>
-      `<tr><td style="width:90px;vertical-align:top"><b>${label}</b></td>` +
-      `<td style="width:auto;word-break:break-word">${value}</td></tr>`
+      `<tr>` +
+      `<td width="22%" style="width:22%;vertical-align:top;white-space:nowrap">` +
+      `<b>${label}</b>` +
+      `</td>` +
+      `<td width="78%" style="width:78%;word-break:break-word">${value}</td>` +
+      `</tr>`
     )
     .join('\n')
   return `
 <table border="1" style="border-collapse:collapse;width:100%;table-layout:fixed">
   <colgroup>
-    <col style="width:90px" />
-    <col />
+    <col style="width:22%" />
+    <col style="width:78%" />
   </colgroup>
 ${rowsHtml}
 </table>`
