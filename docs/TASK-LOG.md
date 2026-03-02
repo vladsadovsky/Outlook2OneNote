@@ -280,6 +280,65 @@ Replaces the temporary auth test UI. States: `idle` (shows Export button or Sett
 
 ---
 
+## 2026-03-01 — Auth + Graph + E2E troubleshooting delta
+**Status:** OneNote notebook loading fixed; export writes pages; formatting fidelity pending.
+
+### What was fixed today
+1. **OneNote notebook loading (MSA) restored**
+   - Root cause: token scope set did not reliably include full notebook-read consent path during active session.
+   - Verified outcome: notebook picker loads successfully (`Approach 1 success`, 8 notebooks returned).
+
+2. **Consent and app-registration validation completed**
+   - Confirmed Azure app registration contains delegated Graph permissions and granted status.
+   - Confirmed personal-account Graph API access independently in Graph Explorer (`GET /v1.0/me/onenote/notebooks` returns 200).
+
+3. **Mail thread fetch fallback for personal-account Graph constraints**
+   - Error seen during export: `400 InefficientFilter` for `/me/messages` query with combined filter/select/top/orderby.
+   - Implemented fallback in `mailService`:
+     - Try current query first.
+     - On `InefficientFilter` retry with simplified query (no `$orderby`), then sort in application code by `receivedDateTime`.
+   - Updated unit tests to align with attachment endpoint behavior.
+   - Validation: `tests/services/mailService.test.ts` passing.
+
+### Known-good baseline at end of day
+- Auth popup + token acquisition succeeds for MSA account.
+- Notebook selection and save in settings succeed.
+- Export flow creates OneNote content (pages are written).
+- Remaining issue is **formatting quality/fidelity**, not auth/connectivity.
+
+### Next-session debug checklist (formatting)
+1. **Capture a single-message repro fixture**
+   - Use one stable email sample (rich HTML + lists + links + inline images + attachment metadata).
+   - Export once and preserve: source `message.body.content`, sanitized HTML output, and final page HTML payload.
+
+2. **Diff the 3 HTML stages**
+   - Stage A: raw Graph body (`mailService` output)
+   - Stage B: sanitizer result (`htmlSanitizer`)
+   - Stage C: composed OneNote page (`pageBuilder`)
+   - Identify where structure diverges (tables, list nesting, line breaks, inline styles, anchor hrefs).
+
+3. **Validate sanitizer removals are intentional**
+   - Check if style stripping or attribute removal is over-aggressive for legitimate email markup.
+   - Confirm no removal of safe formatting-critical tags/attributes.
+
+4. **Validate OneNote HTML constraints**
+   - Compare generated page HTML against Graph OneNote page-create expectations.
+   - Ensure document wrapper/body structure is compatible with OneNote renderer.
+
+5. **Check escaping and text normalization paths**
+   - Verify no double-escaping in `pageBuilder` for content already HTML.
+   - Verify date/metadata block insertion does not alter body container semantics.
+
+6. **Add focused tests for formatting edge-cases**
+   - Nested lists, tables, inline styles, quoted replies, and link preservation.
+   - Assert resulting page HTML contains required structure and sanitized-safe styling.
+
+7. **Retest end-to-end with same fixture**
+   - Compare OneNote rendered output before/after change.
+   - Sign off on acceptable fidelity threshold for v2.
+
+---
+
 ## T-703/T-704 — dateFormatter.ts unit tests
 **Completed:** 2026-02-28
 
@@ -315,4 +374,4 @@ BEM-structured, Fluent/Office-aligned palette (`#0078d4` accent). Key sections: 
 
 ---
 
-*Last updated: 2026-02-28 (Phase 2–8 implementation complete)*
+*Last updated: 2026-03-01 (auth and export-query fixes complete; formatting debug checklist queued)*

@@ -100,11 +100,21 @@ describe('createMailService', () => {
   it('filters out inline attachments', async () => {
     const msg = makeGraphMsg('1')
     msg.hasAttachments = true
-    msg.attachments = [
+    const attachments = [
       { name: 'inline-img.png', size: 500, contentType: 'image/png', isInline: true },
       { name: 'report.pdf', size: 1024, contentType: 'application/pdf', isInline: false },
     ]
-    const client = makeClient([{ value: [msg] }])
+    const mockGet = vi.fn() as GraphClient['get']
+    vi.mocked(mockGet).mockImplementation(async <T>(path: string) => {
+      if (path === '/me/messages') {
+        return { value: [msg] } as T
+      }
+      if (path === `/me/messages/${msg.id}/attachments`) {
+        return { value: attachments } as T
+      }
+      throw new Error(`Unexpected path: ${path}`)
+    })
+    const client: GraphClient = { get: mockGet, post: vi.fn() }
     service = createMailService(client)
     const messages = await service.getConversationMessages('conv-1')
     expect(messages[0].attachments).toHaveLength(1)

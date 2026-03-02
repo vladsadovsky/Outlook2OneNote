@@ -59,6 +59,12 @@ async function getLoginHint(): Promise<string | undefined> {
     const payload = parseJwtPayload(ssoToken)
     const hint = payload['preferred_username'] ?? payload['upn']
     debugLog('auth', 'SSO login hint', hint)
+    
+    // Also log account type info for debugging
+    const tid = payload['tid']  // Tenant ID
+    const accountType = tid === '9188040d-6c67-4c5b-b112-36a304b66dad' ? 'Personal' : 'Work/School'
+    debugLog('auth', `Account type: ${accountType} (tenant: ${tid})`)
+    
     return hint
   } catch {
     debugLog('auth', 'SSO not available — proceeding to MSAL')
@@ -71,49 +77,52 @@ async function getLoginHint(): Promise<string | undefined> {
 export function clearCachedToken(): void {
   sessionStorage.removeItem(TOKEN_KEY)
   sessionStorage.removeItem(EXPIRY_KEY)
+  // Also clear localStorage (some browsers use this)
+  localStorage.removeItem(TOKEN_KEY)
+  localStorage.removeItem(EXPIRY_KEY)
+  debugLog('auth', 'All cached tokens cleared - forcing fresh authentication')
 }
 
 // Returns a valid Graph API bearer token.
 // All other modules call this — never touch MSAL or Office.auth directly.
 export async function getGraphToken(): Promise<string> {
+  console.log('[authService] getGraphToken called')
+  debugLog('auth', 'getGraphToken called')
+  
   const cached = getCachedToken()
   if (cached) {
+    console.log('[authService] Using cached token')
     debugLog('auth', 'Using cached token')
     return cached
   }
 
-  const msal = await getMsal()
-  const loginHint = await getLoginHint()
-
-  // Try silent acquisition first (avoids popup if user already signed in)
+  debugLog('auth', 'No cached token, acquiring new one')
+  console.log('[authService] No cached token, acquiring new one')
+  
   try {
-    const accounts = msal.getAllAccounts()
-    const account = loginHint
-      ? (accounts.find(a => a.username === loginHint) ?? accounts[0])
-      : accounts[0]
-    if (account) {
-      const result = await msal.acquireTokenSilent({ scopes: graphScopes, account })
-      debugLog('auth', 'Silent token acquired')
-      setCachedToken(result.accessToken, result.expiresOn)
-      return result.accessToken
-    }
-  } catch (e) {
-    if (!(e instanceof InteractionRequiredAuthError)) {
-      debugError('auth', 'Unexpected silent failure', e)
-    }
-    debugLog('auth', 'Silent failed — trying popup')
-  }
+    const msal = await getMsal()
+    debugLog('auth', 'MSAL initialized successfully')
+    
+    const loginHint = await getLoginHint()
+    debugLog('auth', `Login hint: ${loginHint || 'none'}`)
 
-  // Popup fallback (single popup, matches native "Save to OneNote" UX)
-  try {
-    const result = await msal.acquireTokenPopup({ scopes: graphScopes, loginHint })
-    debugLog('auth', 'Popup token acquired')
+    // Skip silent authentication and go straight to popup
+    console.log('[authService] Attempting popup authentication')
+    debugLog('auth', 'Attempting popup authentication...')
+    
+    const result = await msal.acquireTokenPopup({ 
+      scopes: graphScopes, 
+      loginHint
+    })
+    console.log('[authService] Fresh popup token acquired successfully')
+    debugLog('auth', 'Popup authentication successful!')
+    
     setCachedToken(result.accessToken, result.expiresOn)
     return result.accessToken
   } catch (e) {
-    debugError('auth', 'Popup failed', e)
+    debugError('auth', `Fresh auth error: ${e instanceof Error ? e.message : 'Unknown error'}`)
     throw new AuthError(
-      'Sign-in failed. Please try again or contact your administrator.',
+      'Authentication failed. Please try again or contact your administrator.',
     )
   }
 }

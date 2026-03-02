@@ -3,6 +3,7 @@ import type { SettingsSchema } from '@/types/settings'
 import type { SettingsService } from '@/settings/settingsService'
 import type { OneNoteService } from '@/onenote/oneNoteService'
 import type { Notebook } from '@/onenote/types'
+import { debugLog, debugError } from '@/utils/logger'
 import NotebookPicker from '../components/NotebookPicker'
 
 interface SettingsViewProps {
@@ -16,6 +17,8 @@ export default function SettingsView({
   oneNoteService,
   onClose,
 }: SettingsViewProps): React.ReactElement {
+  debugLog('SettingsView', 'Component rendering/mounting')
+  
   const current = settingsService.get()
 
   // Draft state — not persisted until Save
@@ -30,6 +33,7 @@ export default function SettingsView({
 
   // Load notebooks on mount
   useEffect(() => {
+    debugLog('SettingsView', 'useEffect triggered - calling loadNotebooks')
     void loadNotebooks()
   }, [])
 
@@ -51,11 +55,35 @@ export default function SettingsView({
   async function loadNotebooks(): Promise<void> {
     setNotebooksLoading(true)
     setNotebooksError(null)
+    
+    debugLog('SettingsView', 'Starting notebook loading...')
+    
     try {
+      console.log('[SettingsView] Loading notebooks...')
       const list = await oneNoteService.listNotebooks()
+      console.log('[SettingsView] Notebooks loaded:', list.length)
+      
+      debugLog('SettingsView', `Successfully loaded ${list.length} notebooks!`)
       setNotebooks(list)
-    } catch {
-      setNotebooksError('Could not load notebooks. Check your connection and try again.')
+    } catch (error) {
+      console.error('[SettingsView] Failed to load notebooks:', error)
+      
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+      debugError('SettingsView', `Notebook loading failed: ${errorMsg}`)
+      
+      // Check for SharePoint license issue
+      if (errorMsg.includes('SharePoint license') || errorMsg.includes('30121')) {
+        setNotebooksError(`Microsoft Graph API doesn't support OneNote access for personal accounts. 
+This is a Microsoft limitation. Consider using a work/school account with Microsoft 365, 
+or export emails manually to OneNote for now.`)
+      } else if (errorMsg.includes('404')) {
+        setNotebooksError('OneNote service not found. Please ensure you have access to Microsoft OneNote.')
+      } else if (errorMsg.includes('All OneNote API approaches failed')) {
+        setNotebooksError(`Personal Microsoft accounts have limited OneNote API access. 
+Try using a work/school account, or access OneNote directly at onenote.com.`)
+      } else {
+        setNotebooksError('Could not load notebooks. Check your connection and try again.')
+      }
     } finally {
       setNotebooksLoading(false)
     }

@@ -24,8 +24,9 @@ export const msalConfig: Configuration = {
 }
 
 export const graphScopes = [
-  'Mail.Read',
-  'Notes.ReadWrite',
-  'offline_access',
-  'User.Read',
+  'https://graph.microsoft.com/Notes.Read',          // ← Added missing scope (v1 format)!
+  'https://graph.microsoft.com/Notes.ReadWrite',     // ← Changed to v1 format
+  'https://graph.microsoft.com/User.Read',           // ← Changed to v1 format  
+  'https://graph.microsoft.com/Mail.Read',           // ← Keep for email functionality
+  'offline_access',                                  // ← Keep for refresh tokens
 ]

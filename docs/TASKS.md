@@ -1,6 +1,6 @@
 # Outlook2OneNote v2 — Task Tracker
 
-**Last updated:** 2026-02-28 (Phase 2–8 implementation complete)
+**Last updated:** 2026-03-01 (OneNote auth fixed, export query fallback added, formatting debug pending)
 **Branch:** v2/main
 **Spec:** docs/SPEC.md | **Design:** docs/DESIGN.md | **Test Plan:** docs/TEST-PLAN.md
 
@@ -74,7 +74,8 @@ Status key: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked
 - [x] T-603 `ThreadTooLargeError` handling — advisory message with Outlook compression guidance
 - [x] T-604 Success state with OneNote link(s) filtered by `preferredLink` setting
 - [x] T-605 Error handling + retry — ErrorBanner with retry callback resets to idle state
-- [ ] T-606 Integration test: full export flow (fetch mocked at network boundary)
+- [~] T-606 Integration test: full export flow (fetch mocked at network boundary) — manual E2E now writes pages; page formatting issue remains
+- [~] T-607 Manual E2E formatting verification in OneNote — investigate HTML fidelity/sanitization/rendering diffs
 
 ## Phase 7 — Shared Utilities
 

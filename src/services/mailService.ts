@@ -11,6 +11,7 @@ export class ThreadTooLargeError extends Error {
 
 export interface MailService {
   getConversationMessages(conversationId: string): Promise<EmailMessage[]>
+  getConversationMessagesSimplified(conversationId: string): Promise<EmailMessage[]>
 }
 
 // Graph API shape for a message list page
@@ -29,7 +30,7 @@ interface GraphMessage {
   receivedDateTime: string
   body: { content: string; contentType: string }
   hasAttachments: boolean
-  attachments?: GraphAttachment[]
+  // attachments will be fetched separately if hasAttachments is true
 }
 
 interface GraphAttachment {
@@ -43,7 +44,7 @@ const THREAD_LIMIT = 50
 // Fetch one over the limit so we can detect a breach without loading the full thread
 const PAGE_SIZE = 51
 
-function mapMessage(m: GraphMessage): EmailMessage {
+function mapMessage(m: GraphMessage, attachments: GraphAttachment[] = []): EmailMessage {
   return {
     id: m.id,
     subject: m.subject,
@@ -58,7 +59,7 @@ function mapMessage(m: GraphMessage): EmailMessage {
     })),
     receivedDateTime: m.receivedDateTime,
     bodyHtml: m.body.content,
-    attachments: (m.attachments ?? [])
+    attachments: attachments
       .filter(a => !a.isInline)
       .map(a => ({ name: a.name, size: a.size, contentType: a.contentType })),
   }
@@ -69,14 +70,79 @@ export function createMailService(client: GraphClient): MailService {
     async getConversationMessages(conversationId: string): Promise<EmailMessage[]> {
       const messages: GraphMessage[] = []
 
-      // First page: include full params
+      // Try the full query first, fall back to simpler query for personal accounts
       let path: string | undefined = '/me/messages'
       let params: Record<string, string> | undefined = {
         '$filter': `conversationId eq '${conversationId}'`,
         '$select': 'id,subject,from,toRecipients,ccRecipients,receivedDateTime,body,hasAttachments',
-        '$expand': 'attachments($select=name,size,contentType,isInline)',
         '$top': String(PAGE_SIZE),
         '$orderby': 'receivedDateTime asc',
+      }
+
+      try {
+        while (path !== undefined) {
+          const page: GraphMessagesPage = await client.get<GraphMessagesPage>(path, params)
+          messages.push(...page.value)
+
+          if (messages.length > THREAD_LIMIT) {
+            throw new ThreadTooLargeError(messages.length)
+          }
+
+          debugLog('mailService', `Fetched ${messages.length} message(s) so far`)
+
+          // nextLink already contains all query params — pass as path with no extra params
+          path = page['@odata.nextLink']
+          params = undefined
+        }
+      } catch (error: any) {
+        // If we get InefficientFilter error, retry with simplified query for personal accounts
+        if (error?.message?.includes('InefficientFilter') || error?.message?.includes('too complex')) {
+          debugLog('mailService', 'Complex query failed, trying simplified query for personal accounts...')
+          return this.getConversationMessagesSimplified(conversationId)
+        }
+        throw error
+      }
+
+      // After fetching all messages, get attachments for those that have them
+      const emailMessages: EmailMessage[] = []
+      for (const message of messages) {
+        let attachments: GraphAttachment[] = []
+        
+        if (message.hasAttachments) {
+          try {
+            const attachmentResponse = await client.get<{ value: GraphAttachment[] }>(
+              `/me/messages/${message.id}/attachments`,
+              { '$select': 'name,size,contentType,isInline' }
+            )
+            attachments = attachmentResponse.value
+            debugLog('mailService', `Fetched ${attachments.length} attachments for message ${message.id}`)
+          } catch (error) {
+            debugLog('mailService', `Failed to fetch attachments for message ${message.id}:`, error)
+            // Continue with empty attachments array - don't fail the entire export
+          }
+        }
+        
+        emailMessages.push(mapMessage(message, attachments))
+      }
+
+      // Sort messages by receivedDateTime (since Graph API orderby might have failed)
+      emailMessages.sort((a, b) => new Date(a.receivedDateTime).getTime() - new Date(b.receivedDateTime).getTime())
+      
+      return emailMessages
+    },
+
+    // Simplified query method for personal accounts (fallback)
+    async getConversationMessagesSimplified(conversationId: string): Promise<EmailMessage[]> {
+      debugLog('mailService', 'Using simplified query for personal Microsoft accounts')
+      const messages: GraphMessage[] = []
+
+      // Simplified query: remove $orderby which causes issues with personal accounts
+      let path: string | undefined = '/me/messages'
+      let params: Record<string, string> | undefined = {
+        '$filter': `conversationId eq '${conversationId}'`,
+        '$select': 'id,subject,from,toRecipients,ccRecipients,receivedDateTime,body,hasAttachments',
+        '$top': String(PAGE_SIZE)
+        // NOTE: No $orderby - we'll sort in JavaScript
       }
 
       while (path !== undefined) {
@@ -87,14 +153,38 @@ export function createMailService(client: GraphClient): MailService {
           throw new ThreadTooLargeError(messages.length)
         }
 
-        debugLog('mailService', `Fetched ${messages.length} message(s) so far`)
+        debugLog('mailService', `Fetched ${messages.length} message(s) so far (simplified query)`)
 
-        // nextLink already contains all query params — pass as path with no extra params
         path = page['@odata.nextLink']
         params = undefined
       }
 
-      return messages.map(mapMessage)
+      // Get attachments for messages that have them
+      const emailMessages: EmailMessage[] = []
+      for (const message of messages) {
+        let attachments: GraphAttachment[] = []
+        
+        if (message.hasAttachments) {
+          try {
+            const attachmentResponse = await client.get<{ value: GraphAttachment[] }>(
+              `/me/messages/${message.id}/attachments`,
+              { '$select': 'name,size,contentType,isInline' }
+            )
+            attachments = attachmentResponse.value
+            debugLog('mailService', `Fetched ${attachments.length} attachments for message ${message.id}`)
+          } catch (error) {
+            debugLog('mailService', `Failed to fetch attachments for message ${message.id}:`, error)
+          }
+        }
+        
+        emailMessages.push(mapMessage(message, attachments))
+      }
+
+      // Sort by receivedDateTime since we can't use $orderby with personal accounts
+      emailMessages.sort((a, b) => new Date(a.receivedDateTime).getTime() - new Date(b.receivedDateTime).getTime())
+      debugLog('mailService', `Sorted ${emailMessages.length} messages by date`)
+      
+      return emailMessages
     },
   }
 }

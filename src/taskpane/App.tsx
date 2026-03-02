@@ -2,9 +2,11 @@ import React, { useState } from 'react'
 import type { SettingsService } from '@/settings/settingsService'
 import type { MailService } from '@/services/mailService'
 import type { OneNoteService } from '@/onenote/oneNoteService'
+import { debugLog } from '@/utils/logger'
 import AppHeader from './components/AppHeader'
 import ExportView from './views/ExportView'
 import SettingsView from './views/SettingsView'
+import DebugPanel from './components/DebugPanel'
 
 interface AppProps {
   settingsService: SettingsService
@@ -19,23 +21,35 @@ export default function App({
 }: AppProps): React.ReactElement {
   const [showSettings, setShowSettings] = useState(false)
 
+  const handleShowSettings = () => {
+    debugLog('App', 'Opening settings view')
+    setShowSettings(true)
+  }
+
+  const handleCloseSettings = () => {
+    debugLog('App', 'Closing settings view')
+    setShowSettings(false)
+  }
+
   return (
     <div className="app">
-      <AppHeader onSettingsClick={() => setShowSettings(true)} />
+      <AppHeader onSettingsClick={handleShowSettings} />
       {showSettings ? (
         <SettingsView
           settingsService={settingsService}
           oneNoteService={oneNoteService}
-          onClose={() => setShowSettings(false)}
+          onClose={handleCloseSettings}
         />
       ) : (
         <ExportView
           mailService={mailService}
           oneNoteService={oneNoteService}
           settingsService={settingsService}
-          onOpenSettings={() => setShowSettings(true)}
+          onOpenSettings={handleShowSettings}
         />
       )}
+      {/* Debug panel - only visible in development */}
+      {import.meta.env.DEV && <DebugPanel />}
     </div>
   )
 }

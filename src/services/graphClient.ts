@@ -2,6 +2,7 @@ import { getGraphToken, clearCachedToken } from '@/auth/authService'
 import { debugLog, debugError } from '@/utils/logger'
 
 const GRAPH_BASE = 'https://graph.microsoft.com/v1.0'
+const GRAPH_BETA_BASE = 'https://graph.microsoft.com/beta'
 
 export interface GraphClient {
   get<T>(path: string, params?: Record<string, string>): Promise<T>
@@ -22,7 +23,15 @@ async function attempt(url: string, init: RequestInit, token: string): Promise<R
 
 // Resolves an absolute or relative Graph path to a full URL with optional query params.
 function resolveUrl(path: string, params?: Record<string, string>): string {
-  const base = path.startsWith('http') ? path : `${GRAPH_BASE}${path}`
+  let base: string
+  if (path.startsWith('http')) {
+    base = path
+  } else if (path.startsWith('/beta/')) {
+    base = `${GRAPH_BETA_BASE}${path.substring(5)}` // Remove '/beta' and use beta base
+  } else {
+    base = `${GRAPH_BASE}${path}`
+  }
+  
   if (!params) return base
   return `${base}?${new URLSearchParams(params)}`
 }
