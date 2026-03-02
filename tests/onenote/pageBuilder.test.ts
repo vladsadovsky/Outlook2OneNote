@@ -38,14 +38,22 @@ describe('buildPageHtml', () => {
 
   it('includes from address in metadata table', () => {
     const html = buildPageHtml(makeMessage(), false)
+    expect(html).toContain('<b>From:</b>')
     expect(html).toContain('Alice')
     expect(html).toContain('alice@example.com')
   })
 
   it('includes to recipients in metadata table', () => {
     const html = buildPageHtml(makeMessage(), false)
+    expect(html).toContain('<b>To:</b>')
     expect(html).toContain('Bob')
     expect(html).toContain('bob@example.com')
+  })
+
+  it('renders metadata header as non-table block', () => {
+    const html = buildPageHtml(makeMessage(), false)
+    expect(html).toContain('<div data-id="metadata">')
+    expect(html).not.toContain('<div data-id="metadata">\n    <table')
   })
 
   it('omits CC row when no CC recipients', () => {

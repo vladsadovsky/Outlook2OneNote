@@ -28,7 +28,7 @@ function formatAddresses(addrs: { name: string; address: string }[]): string {
     .join(', ')
 }
 
-function buildMetadataTable(message: EmailMessage): string {
+function buildMetadataBlock(message: EmailMessage): string {
   const rows = [
     ['From', formatAddresses([message.from])],
     ['To', formatAddresses(message.toRecipients)],
@@ -38,22 +38,15 @@ function buildMetadataTable(message: EmailMessage): string {
   ]
   const rowsHtml = rows
     .map(([label, value]) =>
-      `<tr>` +
-      `<td width="22%" style="width:22%;vertical-align:top;white-space:nowrap">` +
-      `<b>${label}</b>` +
-      `</td>` +
-      `<td width="78%" style="width:78%;word-break:break-word">${value}</td>` +
-      `</tr>`
+      `<p style="margin:0 0 6px 0">` +
+      `<b>${label}:</b> ${value}` +
+      `</p>`
     )
     .join('\n')
   return `
-<table border="1" style="border-collapse:collapse;width:100%;table-layout:fixed">
-  <colgroup>
-    <col style="width:22%" />
-    <col style="width:78%" />
-  </colgroup>
+<div style="margin:0;padding:0">
 ${rowsHtml}
-</table>`
+</div>`
 }
 
 function buildAttachmentsSection(message: EmailMessage): string {
@@ -81,7 +74,7 @@ function buildAttachmentsSection(message: EmailMessage): string {
 export function buildPageHtml(message: EmailMessage, includeAttachments: boolean): string {
   const title = escapeHtml(message.subject)
   const created = message.receivedDateTime
-  const metadata = buildMetadataTable(message)
+  const metadata = buildMetadataBlock(message)
   const body = sanitizeHtml(message.bodyHtml)
   const attachments = includeAttachments ? buildAttachmentsSection(message) : ''
 

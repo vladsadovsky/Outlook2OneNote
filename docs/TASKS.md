@@ -1,6 +1,6 @@
 # Outlook2OneNote v2 — Task Tracker
 
-**Last updated:** 2026-03-01 (OneNote auth fixed, export query fallback added, formatting debug pending)
+**Last updated:** 2026-03-02 (enterprise estimates added in DEV_NOTES; T-OBO decision task clarified)
 **Branch:** v2/main
 **Spec:** docs/SPEC.md | **Design:** docs/DESIGN.md | **Test Plan:** docs/TEST-PLAN.md
 
@@ -22,9 +22,9 @@ Status key: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked
 ## Phase 1 — Auth (US-01)
 
 - [x] T-101 Implement `msalConfig.ts` — MSAL v3 config + `AccountTypePolicy` + authority mapping
-- [x] T-102 Implement `authService.ts` — SSO → silent → popup flow
+- [x] T-102 Implement `authService.ts` — cache → SSO login hint → popup token flow
 - [x] T-103 Write unit tests for `authService` (MSAL mocked) — 9 tests, all passing
-- [~] T-104 Manual test: SSO path works in Outlook Web — popup fallback verified; SSO silent untested (needs prior session)
+- [~] T-104 Manual test: SSO login-hint path works in Outlook Web — popup auth verified
 - [x] T-105 Manual test: MSAL popup fallback works for Entra ID account — verified ✓
 - [x] T-106 Manual test: MSAL popup fallback works for MSA account — verified ✓
 - [ ] T-107 Manual test: `entra-only` policy blocks MSA login attempt
@@ -55,6 +55,7 @@ Status key: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked
 - [x] T-402 Implement 50-message cap: fetch up to 51, throw `ThreadTooLargeError` if exceeded
 - [x] T-403 Unit tests for `mailService` including `ThreadTooLargeError` path
 - [x] T-404 Unit tests for `mailService` paging (`@odata.nextLink` mock)
+- [x] T-405 Personal-account fallback for Graph `InefficientFilter` (simplified query + in-app sort)
 
 ## Phase 5 — OneNote Library (src/onenote/)
 
@@ -89,6 +90,7 @@ Status key: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked
 - [x] T-801 `App.tsx` shell with Export / Settings view toggle (services injected as props)
 - [x] T-802 `ErrorBanner.tsx` component
 - [x] T-803 `ProgressBar.tsx` component
+- [x] T-806 Dev debug panel (`DebugPanel.tsx`) + settings toggle (`showDebugPanel`)
 - [ ] T-804 Ribbon button + task pane open command (US-05) — single button only
 - [ ] T-805 Responsive layout for narrow task pane
 
@@ -105,7 +107,7 @@ Status key: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked
 ## Phase 10 — AppSource Submission
 *(start only after Phase 9 complete and T-907 manual test pass signed off)*
 
-- [ ] T-1001 Resolve T-OBO: confirm whether OBO backend is required for AppSource certification; add backend tasks if so
+- [ ] T-1001 Resolve T-OBO architecture decision: choose SPA-only vs backend OBO, record ADR in `TASK-LOG.md`, and add implementation tasks if OBO is selected
 - [ ] T-1002 Create Microsoft Partner Center account (if not already registered)
 - [ ] T-1003 Write store listing: short description (100 chars), long description (500 chars), keywords
 - [ ] T-1004 Capture store screenshots (min 3): task pane open, export in progress, success state
@@ -120,7 +122,7 @@ Status key: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked
 
 ## Blocked / Decisions Pending
 
-- **T-OBO** — Determine if OBO server-side exchange is required for AppSource, or if direct token use is acceptable. If OBO needed, add Azure Function backend tasks.
+- **T-OBO** — Architectural decision pending: keep SPA delegated flow or add backend OBO exchange. Decision must be documented as ADR and reflected in task scope before Phase 10 execution.
 
 ---
 
@@ -131,17 +133,22 @@ Status key: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked
 - T-F03 Extract `utils/retry.ts` + `utils/logger.ts` into shared npm package used by both projects
 - T-F04 Outlook Classic / COM add-in support
 
----
+### Enterprise Enablement (Future)
+*(estimate reference: `DEV_NOTES.md`, target effort ~1–2 weeks for baseline MSA+Entra readiness)*
 
-## Completed
+- [ ] T-E01 Re-introduce and validate silent token path for both MSA and Entra before popup fallback
+- [ ] T-E02 Add explicit auth/account diagnostics for authority/policy/account-type mismatch scenarios
+- [ ] T-E03 Replace MSA-biased OneNote error messaging with account-neutral guidance in SettingsView
+- [ ] T-E04 Add enterprise-focused auth/manual tests (tenant restrictions, consent behavior, account switching)
+- [ ] T-E05 Validate Graph mail query behavior for Entra accounts and keep personal fallback non-regressive
+- [ ] T-E06 Build and execute cross-account verification matrix (MSA + Entra) and capture pass criteria
+- [ ] T-E07 Record dual-account readiness sign-off in `TASK-LOG.md` and update `DESIGN.md`/`SPEC.md` if behavior changes
+- [ ] T-E08 Conditional Access compatibility pass (MFA/CAE/session policies) and failure UX validation
+- [ ] T-E09 Admin consent + user-consent model documentation for tenant deployment (least privilege + rollout guidance)
+- [ ] T-E10 Tenant deployment hardening: app assignment strategy, allow/block policy notes, environment policy matrix
+- [ ] T-E11 Audit/security logging plan for enterprise troubleshooting (PII-safe diagnostics and redaction rules)
+- [ ] T-E12 Security review checklist for enterprise release (token lifetime handling, storage boundaries, popup/redirect behavior)
+- [ ] T-E13 Data governance checklist (retention, support boundaries, privacy disclosures for enterprise customers)
+- [ ] T-E14 Enterprise operational readiness (runbook for auth failures, throttling incidents, and Graph outage handling)
 
-- [x] T-001 Create `v2/main` branch
-- [x] T-002 `docs/SPEC.md`
-- [x] T-003 `docs/DESIGN.md`
-- [x] T-004 `docs/TASKS.md`
-- [x] T-005 Scaffold TypeScript project (Vite 5, Vitest 2, ESLint 9, tsconfig strict)
-- [x] T-007 `manifest.json` — JSON Unified Manifest skeleton
-- [x] T-008 `docs/TEST-PLAN.md`
-- [x] T-101 `msalConfig.ts`
-- [x] T-102 `authService.ts`
-- [x] T-103 Unit tests for `authService` (9 tests)
+

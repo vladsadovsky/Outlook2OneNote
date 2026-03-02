@@ -1,8 +1,8 @@
 # Outlook2OneNote v2 — Technical Design
 
-**Version:** 2.1
-**Date:** 2026-02-28
-**Status:** Draft
+**Version:** 2.2
+**Date:** 2026-03-02
+**Status:** Active
 
 ---
 
@@ -22,6 +22,7 @@ src/
       NotebookPicker.tsx ← Dropdown for notebook selection
       ProgressBar.tsx    ← Export progress indicator
       ErrorBanner.tsx    ← Error display with retry action
+      DebugPanel.tsx     ← Dev debug console panel (toggle via settings)
   commands/
     commands.ts          ← Ribbon button handler (opens task pane)
     commands.html        ← Commands shell
@@ -67,6 +68,10 @@ src/
 | Linting | ESLint + @typescript-eslint | latest |
 | Manifest | JSON Unified Manifest | v2 |
 
+### 2.1 Framework and Tooling Rationale
+
+React was selected for v2 primarily for implementation continuity, predictable component/state patterns, and lower delivery risk in an actively evolving codebase. Vite does not materially constrain this choice because it supports both React and Vue well; in this project, Vite's value is fast HTTPS local development and build simplicity for Office add-in workflows rather than framework preference. Vue would also be a valid technical option for this UI scope, but switching now would require non-trivial migration of components, tests, and team workflow with limited functional benefit.
+
 ---
 
 ## 3. Code Style Conventions
@@ -85,17 +90,29 @@ Conventions are aligned with the `llm-aggregator.ts` project to enable shared ut
 
 ### 3.2 Utilities (shared pattern with llm-aggregator)
 
-**`utils/logger.ts`** — conditional dev-only logging:
+**`utils/logger.ts`** — conditional dev-only logging with timestamped messages:
 ```typescript
 export function debugLog(tag: string, ...args: unknown[]): void {
-  if (process.env.NODE_ENV === 'development') {
-    console.log(`[${tag}]`, ...args)
+  const timestamp = new Date().toISOString().slice(11, 23)
+  const message = `[${timestamp}] [${tag}] ${args.map(arg =>
+    typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+  ).join(' ')}`
+
+  if (import.meta.env.DEV) {
+    console.log(message)
+    console.warn(`🔍 DEBUG: ${message}`)
   }
 }
 
 export function debugError(tag: string, ...args: unknown[]): void {
-  if (process.env.NODE_ENV === 'development') {
-    console.error(`[${tag}]`, ...args)
+  const timestamp = new Date().toISOString().slice(11, 23)
+  const message = `[${timestamp}] [${tag}] ERROR: ${args.map(arg =>
+    typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+  ).join(' ')}`
+
+  if (import.meta.env.DEV) {
+    console.error(message)
+    console.warn(`🚨 ERROR: ${message}`)
   }
 }
 ```
@@ -145,7 +162,7 @@ A compile-time / environment-level configuration controls which account types ar
 type AccountTypePolicy = 'all' | 'msa-only' | 'entra-only'
 
 const ACCOUNT_TYPE_POLICY: AccountTypePolicy =
-  (process.env.ACCOUNT_TYPE_POLICY as AccountTypePolicy) ?? 'all'
+  (import.meta.env.VITE_ACCOUNT_TYPE_POLICY as AccountTypePolicy) ?? 'all'
 
 // Authority mapping:
 //   'all'         → 'https://login.microsoftonline.com/common'   (MSA + Entra)
@@ -162,19 +179,19 @@ async getGraphToken(): Promise<string>
 ```
 
 1. Check `sessionStorage` for a valid (non-expired) token → return immediately if found.
-2. Try `Office.auth.getAccessToken({ allowSignInPrompt: false })` to get an SSO bootstrap token.
-3. On SSO success: exchange via OBO flow (or use directly if scopes match — see OBO note in TASKS.md T-OBO).
-4. On SSO failure (error codes 13000–13999): fall back to `msalInstance.acquireTokenSilent()`.
-5. On silent failure: `msalInstance.acquireTokenPopup()`.
-6. Store result in `sessionStorage` with expiry.
-7. Throw `AuthError` with a user-readable message on all failures.
+2. Try `Office.auth.getAccessToken({ allowSignInPrompt: false, allowConsentPrompt: false })` only to extract SSO login hint.
+3. Acquire Graph token via `msalInstance.acquireTokenPopup({ scopes, loginHint })`.
+4. Store result in `sessionStorage` with expiry.
+5. Throw `AuthError` with a user-readable message on all failures.
+
+Current implementation is popup-first (no active silent token branch).
 
 ### 4.4 MSAL Configuration
 
 ```typescript
 {
   auth: {
-    clientId: process.env.CLIENT_ID,
+    clientId: import.meta.env.VITE_CLIENT_ID,
     authority: authorityForPolicy(ACCOUNT_TYPE_POLICY),
     redirectUri: `${window.location.origin}/auth/callback.html`,
   },
@@ -187,7 +204,12 @@ async getGraphToken(): Promise<string>
 
 ### 4.5 Scopes
 
-See [docs/SPEC.md](SPEC.md) Section 5 for the required Graph API scopes and rationale.
+Active scopes:
+- `https://graph.microsoft.com/Notes.Read`
+- `https://graph.microsoft.com/Notes.ReadWrite`
+- `https://graph.microsoft.com/User.Read`
+- `https://graph.microsoft.com/Mail.Read`
+- `offline_access`
 
 ---
 
@@ -204,18 +226,21 @@ interface GraphClient {
 
 - Attaches `Authorization: Bearer <token>` via `authService.getGraphToken()`.
 - On 401: one token refresh attempt, retry once, then throw.
-- On 429: waits `Retry-After` seconds (via `withRetry`), retries once.
+- On 429: waits `Retry-After` seconds, retries once.
 
 ### 5.2 mailService.ts
 
 ```typescript
 interface MailService {
   getConversationMessages(conversationId: string): Promise<EmailMessage[]>
+  getConversationMessagesSimplified(conversationId: string): Promise<EmailMessage[]>
 }
 ```
 
-- Fetches all pages of `/me/messages?$filter=conversationId eq '{id}'&$select=...&$top=50`.
-- Returns messages sorted by `receivedDateTime` ascending.
+- Primary query: `/me/messages?$filter=conversationId eq '{id}'&$select=...&$top=51&$orderby=receivedDateTime asc`.
+- On Graph `InefficientFilter` / "too complex", retries with simplified query (no `$orderby`) for personal-account compatibility.
+- Fetches attachments per-message from `/me/messages/{id}/attachments` when `hasAttachments=true`.
+- Returns messages sorted by `receivedDateTime` ascending in application code.
 - Throws `ThreadTooLargeError` if message count exceeds 50 before returning.
 
 ### 5.3 settingsService.ts
@@ -228,6 +253,7 @@ interface SettingsSchema {
   sortOrder:            'asc' | 'desc'  // default: 'asc'
   includeAttachments:   boolean      // default: true
   preferredLink:        'web' | 'desktop' | 'both'  // default: 'both'
+  showDebugPanel:       boolean      // default: DEV=true, persisted in roaming settings
 }
 
 interface SettingsService {
@@ -243,9 +269,10 @@ interface SettingsService {
 
 ### 6.1 Boundary Rule
 
-Everything under `src/onenote/` must have **zero imports from** `src/taskpane/`, `src/commands/`, `src/auth/`, `src/services/`, or any Office.js API. The only allowed dependencies are:
+Everything under `src/onenote/` must have **zero imports from** `src/taskpane/`, `src/commands/`, `src/auth/`, or any Office.js API. The only allowed dependencies are:
 
 - `src/utils/` (logger, retry)
+- `src/services/graphClient` (type-only import for dependency injection contract)
 - `@microsoft/microsoft-graph-types`
 - Standard TypeScript / DOM types
 
@@ -288,7 +315,7 @@ export interface Page     { id: string; webUrl: string; oneNoteClientUrl: string
 interface OneNoteService {
   listNotebooks(): Promise<Notebook[]>
   createSection(notebookId: string, sectionName: string): Promise<Section>
-  createPage(sectionId: string, message: EmailMessage, title: string): Promise<Page>
+  createPage(sectionId: string, pageHtml: string, title: string): Promise<Page>
 }
 ```
 
@@ -315,7 +342,8 @@ The export pipeline runs in `ExportView.tsx` (delegating to an `exportOrchestrat
 6. oneNoteService.createSection(notebookId, sectionName)
    → emit progress: 'Creating OneNote section…'
 7. For each message (index i of n):
-   a. oneNoteService.createPage(sectionId, emailMessage, title)
+  a. `pageBuilder.buildPageHtml(emailMessage, includeAttachments)`
+  b. `oneNoteService.createPage(sectionId, pageHtml, title)`
    → emit progress: `Exporting message ${i + 1} of ${n}…`
 8. Return page links filtered by settings.preferredLink
    → display success with link(s)
@@ -335,6 +363,7 @@ Interaction model (matching llm-aggregator `SettingsDialog` pattern):
 - Escape key → dismiss without saving
 - Ctrl+Enter or Save button → `settingsService.set(...)` + `settingsService.save()` → dismiss
 - Settings are not persisted until Save is explicitly triggered
+- Includes debug option (`showDebugPanel`) to render `DebugPanel` in dev mode
 
 Admin-controlled settings (account type policy) are read-only environment values and are **not rendered** in the settings dialog.
 
@@ -410,20 +439,20 @@ In this model, llm-aggregator becomes the **unified QA/thread importer** and use
 
 ```
 npm install
-npm run dev        # webpack-dev-server with HTTPS (required for Office add-ins)
+npm run dev        # Vite dev server with HTTPS (required for Office add-ins)
 npm run build      # production bundle
-npm run test       # Jest
+npm run test       # Vitest
 npm run lint       # ESLint
 ```
 
-Environment variables (injected via webpack `DefinePlugin` from `.env`):
+Environment variables (injected by Vite from `.env`):
 
 | Variable | Values | Default |
 |----------|--------|---------|
-| `CLIENT_ID` | Azure app registration GUID | required |
-| `TENANT_ID` | `common` / specific tenant GUID | `common` |
-| `ACCOUNT_TYPE_POLICY` | `all` / `msa-only` / `entra-only` | `all` |
+| `VITE_CLIENT_ID` | Azure app registration GUID | required |
+| `VITE_TENANT_ID` | `common` / specific tenant GUID | `common` |
+| `VITE_ACCOUNT_TYPE_POLICY` | `all` / `msa-only` / `entra-only` | `all` |
 
 ---
 
-*Last updated: 2026-02-28*
+*Last updated: 2026-03-02*

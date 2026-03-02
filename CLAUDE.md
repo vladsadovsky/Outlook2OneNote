@@ -26,6 +26,18 @@ tests/           ← acceptance tests tied to spec items
 
 Use `TodoWrite` for in-session progress tracking. Update `docs/TASKS.md` to persist across sessions.
 
+## Agent Safety Rules (all coding agents)
+
+These rules are mandatory for any agent editing this repo.
+
+- **Never erase existing note/log content unless explicitly asked.**
+- For `DEV_NOTES.md`, `docs/DEV-NOTES.md`, `docs/TASK-LOG.md`, and `docs/TASKS.md`, use **append-or-merge only by default**.
+- If the user explicitly asks to edit/rewrite specific sections, do it, but preserve unrelated dated entries unless removal is explicitly requested.
+- Before editing any documentation file, read current contents and preserve existing dated entries.
+- If a requested change could replace or conflict with existing content, ask for confirmation before destructive edits.
+- After documentation edits, summarize **added vs changed vs removed** sections.
+- If two files appear to serve a similar purpose, do not consolidate/delete without explicit user instruction.
+
 ## Branch Strategy
 
 ```
