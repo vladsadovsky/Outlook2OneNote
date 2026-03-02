@@ -21,11 +21,19 @@ export interface ExportOptions {
 // Replaces {subject} and {date} tokens in the section name format string.
 function buildSectionName(format: string, subject: string, isoDate: string): string {
   const date = formatDateForSection(isoDate)
-  return format
+  const raw = format
     .replace('{subject}', subject)
     .replace('{date}', date)
-    // Truncate to 50 chars — OneNote section name limit
-    .slice(0, 50)
+  const sanitized = raw
+    // OneNote/Graph name constraints: remove invalid characters
+    .replace(/[\?*\/\\:<>|&#'"%~]/g, ' ')
+    // Collapse repeated whitespace
+    .replace(/\s+/g, ' ')
+    .trim()
+  const finalName = sanitized.length > 0 ? sanitized : `Email Thread ${date}`
+
+  // Truncate to 50 chars — OneNote section name limit
+  return finalName.slice(0, 50)
 }
 
 export async function exportThread(options: ExportOptions): Promise<ExportResult> {

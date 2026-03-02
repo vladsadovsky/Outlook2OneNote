@@ -37,9 +37,19 @@ function buildMetadataTable(message: EmailMessage): string {
     ['Subject', escapeHtml(message.subject)],
   ]
   const rowsHtml = rows
-    .map(([label, value]) => `<tr><td><b>${label}</b></td><td>${value}</td></tr>`)
+    .map(([label, value]) =>
+      `<tr><td style="width:90px;vertical-align:top"><b>${label}</b></td>` +
+      `<td style="width:auto;word-break:break-word">${value}</td></tr>`
+    )
     .join('\n')
-  return `<table border="1" style="border-collapse:collapse;width:100%">\n${rowsHtml}\n</table>`
+  return `
+<table border="1" style="border-collapse:collapse;width:100%;table-layout:fixed">
+  <colgroup>
+    <col style="width:90px" />
+    <col />
+  </colgroup>
+${rowsHtml}
+</table>`
 }
 
 function buildAttachmentsSection(message: EmailMessage): string {

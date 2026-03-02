@@ -14,6 +14,7 @@ export const DEFAULT_SETTINGS: SettingsSchema = {
   sortOrder: 'asc',
   includeAttachments: true,
   preferredLink: 'both',
+  showDebugPanel: import.meta.env.DEV,
 }
 
 const SETTINGS_KEY = 'o2on_settings'
@@ -22,6 +23,9 @@ const SETTINGS_KEY = 'o2on_settings'
 export function createSettingsService(): SettingsService {
   const stored = Office.context.roamingSettings.get(SETTINGS_KEY) as Partial<SettingsSchema> | null
   let current: SettingsSchema = { ...DEFAULT_SETTINGS, ...(stored ?? {}) }
+  if (stored && !('showDebugPanel' in stored)) {
+    current = { ...current, showDebugPanel: false }
+  }
 
   debugLog('settings', 'Loaded settings', current)
 

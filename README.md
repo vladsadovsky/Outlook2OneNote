@@ -56,7 +56,7 @@ Follow the full walkthrough in docs/AZURE-APP-REG.md (Personal Microsoft account
 
 ### 5) Create the .env file
 
-Create a file named .env.local in the repo root:
+Create a file named .env in the repo root:
 
 ```bash
 VITE_CLIENT_ID=YOUR-CLIENT-ID-HERE
@@ -115,7 +115,7 @@ Most users will be personal accounts. If you need Entra ID support for a specifi
 
 Follow the full walkthrough in docs/AZURE-APP-REG.md (Work or school accounts section).
 
-### 2) Update .env.local
+### 2) Update .env
 
 ```bash
 VITE_CLIENT_ID=YOUR-CLIENT-ID-HERE
@@ -155,6 +155,11 @@ If export fails, check the error banner in the task pane and the browser console
 - VITE_ACCOUNT_TYPE_POLICY (optional)
   - all (default), msa-only, entra-only
   - For personal accounts only, set msa-only
+
+### Debug console
+
+- The in-app debug console is enabled by default in dev builds.
+- You can toggle it in Settings via the "Show debug console" checkbox.
 
 ## Troubleshooting
 

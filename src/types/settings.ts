@@ -5,4 +5,5 @@ export interface SettingsSchema {
   sortOrder: 'asc' | 'desc'       // default: 'asc'
   includeAttachments: boolean      // default: true
   preferredLink: 'web' | 'desktop' | 'both'  // default: 'both'
+  showDebugPanel: boolean          // default: false
 }

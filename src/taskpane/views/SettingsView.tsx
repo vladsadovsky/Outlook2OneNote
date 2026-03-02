@@ -10,12 +10,14 @@ interface SettingsViewProps {
   settingsService: SettingsService
   oneNoteService: OneNoteService
   onClose: () => void
+  onSaved: (settings: SettingsSchema) => void
 }
 
 export default function SettingsView({
   settingsService,
   oneNoteService,
   onClose,
+  onSaved,
 }: SettingsViewProps): React.ReactElement {
   debugLog('SettingsView', 'Component rendering/mounting')
   
@@ -99,6 +101,7 @@ Try using a work/school account, or access OneNote directly at onenote.com.`)
     try {
       settingsService.set(draft)
       await settingsService.save()
+      onSaved({ ...draft })
       onClose()
     } catch {
       setSaveError('Failed to save settings. Please try again.')
@@ -193,6 +196,18 @@ Try using a work/school account, or access OneNote directly at onenote.com.`)
               {v === 'web' ? 'Web only' : v === 'desktop' ? 'Desktop app only' : 'Both'}
             </label>
           ))}
+        </div>
+
+        {/* Debug panel */}
+        <div className="settings-field">
+          <label className="settings-field__checkbox">
+            <input
+              type="checkbox"
+              checked={draft.showDebugPanel}
+              onChange={e => setDraft(d => ({ ...d, showDebugPanel: e.target.checked }))}
+            />
+            Show debug console
+          </label>
         </div>
 
         {saveError && <p className="settings-dialog__error">{saveError}</p>}

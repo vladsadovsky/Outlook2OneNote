@@ -18,7 +18,7 @@ Use this if your users sign in with a personal Microsoft account (outlook.com, h
    - Platform: "Single-page application (SPA)"
    - URI: https://localhost:3000/auth/callback.html
 7. Click "Register"
-8. Copy the "Application (client) ID" (used in .env.local as VITE_CLIENT_ID)
+8. Copy the "Application (client) ID" (used in .env as VITE_CLIENT_ID)
 
 ### 2) Add Microsoft Graph permissions
 
@@ -53,7 +53,7 @@ Use this if your users sign in with a work or school account.
    - Platform: "Single-page application (SPA)"
    - URI: https://localhost:3000/auth/callback.html
 7. Click "Register"
-8. Copy the "Application (client) ID" (used in .env.local as VITE_CLIENT_ID)
+8. Copy the "Application (client) ID" (used in .env as VITE_CLIENT_ID)
 
 ### 2) Add Microsoft Graph permissions
 
@@ -79,5 +79,5 @@ Many tenants require admin consent for the Graph scopes above.
 
 - No client secret is required for this add-in (public client, SPA flow).
 - Redirect URI must match exactly: https://localhost:3000/auth/callback.html
-- For personal accounts only, set VITE_ACCOUNT_TYPE_POLICY=msa-only in .env.local
+- For personal accounts only, set VITE_ACCOUNT_TYPE_POLICY=msa-only in .env
 - For Entra-only deployments, set VITE_ACCOUNT_TYPE_POLICY=entra-only
