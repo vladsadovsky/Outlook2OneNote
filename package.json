@@ -18,6 +18,9 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@azure/identity": "^4.13.0",
+    "@azure/msal-node": "^5.0.6",
+    "@microsoft/microsoft-graph-client": "^3.0.7",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
     "@testing-library/user-event": "^14.5.2",
@@ -31,7 +34,11 @@
     "@vitejs/plugin-react": "^4.3.4",
     "eslint": "^9.0.0",
     "eslint-plugin-office-addins": "^4.0.3",
+    "express": "^5.2.1",
+    "isomorphic-fetch": "^3.0.0",
     "jsdom": "^25.0.1",
+    "jsonwebtoken": "^9.0.3",
+    "jwks-rsa": "^4.0.1",
     "office-addin-dev-certs": "^2.0.6",
     "typescript": "^5.7.2",
     "vite": "^5.4.11",
